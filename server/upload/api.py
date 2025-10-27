@@ -255,39 +255,78 @@ async def delete_file(file_path: str):
     List all uploaded files.
     
     Returns information about all files in the upload directory.
+    Supports pagination with limit and offset parameters.
     """
 )
-async def list_uploaded_files(request: Request):
+async def list_uploaded_files(
+    request: Request,
+    limit: int = 100,
+    offset: int = 0,
+    max_depth: int = 5
+):
     """
-    List all uploaded files.
+    List all uploaded files with pagination and depth control.
     
     Args:
         request: FastAPI request object (to get base URL)
+        limit: Maximum number of files to return (default: 100)
+        offset: Number of files to skip (default: 0)
+        max_depth: Maximum directory depth to traverse (default: 5, prevents scanning entire PVC)
     
     Returns:
         List[FileInfo]: List of file information
     """
     base_url = str(request.base_url).rstrip('/')
-    upload_base = Path("uploads")
+    # Use app-specific subdirectory to avoid scanning entire shared PVC
+    upload_base = Path("uploads") / "aividfromppt"
     
     if not upload_base.exists():
         return []
     
     files_info = []
-    for file_path in upload_base.rglob("*"):
-        if file_path.is_file():
-            relative_path = str(file_path)
-            file_url = f"{base_url}/api/v1/upload/files/{relative_path}"
-            file_stat = file_path.stat()
-            
-            files_info.append(FileInfo(
-                filename=file_path.name,
-                file_path=relative_path,
-                file_url=file_url,
-                file_size=file_stat.st_size,
-                file_type=get_file_type(file_path.name),
-                upload_time=get_current_time()  # Note: using current time, could use file mtime
-            ))
+    file_count = 0
+    
+    # Use iterative approach with depth limit to avoid scanning entire shared volume
+    def scan_directory(directory: Path, current_depth: int = 0):
+        nonlocal file_count
+        
+        # Stop if we've collected enough files or reached max depth
+        if file_count >= offset + limit or current_depth > max_depth:
+            return
+        
+        try:
+            # Only list immediate children, not recursive
+            for item in directory.iterdir():
+                if file_count >= offset + limit:
+                    break
+                    
+                if item.is_file():
+                    # Skip if we haven't reached offset yet
+                    if file_count < offset:
+                        file_count += 1
+                        continue
+                    
+                    relative_path = str(item)
+                    file_url = f"{base_url}/api/v1/upload/files/{relative_path}"
+                    file_stat = item.stat()
+                    
+                    files_info.append(FileInfo(
+                        filename=item.name,
+                        file_path=relative_path,
+                        file_url=file_url,
+                        file_size=file_stat.st_size,
+                        file_type=get_file_type(item.name),
+                        upload_time=get_current_time()  # Note: using current time, could use file mtime
+                    ))
+                    file_count += 1
+                elif item.is_dir() and current_depth < max_depth:
+                    # Recursively scan subdirectories with depth limit
+                    scan_directory(item, current_depth + 1)
+        except (PermissionError, OSError):
+            # Skip directories we can't access
+            pass
+    
+    scan_directory(upload_base)
     
     return files_info
 

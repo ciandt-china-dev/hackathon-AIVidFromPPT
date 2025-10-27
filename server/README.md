@@ -2,6 +2,18 @@
 
 这是一个基于FastAPI框架构建的多功能服务器，集成了各种api服务，支持MCP (Model Context Protocol) 协议。
 
+## 重要说明
+
+### 文件存储路径
+- 本服务使用 **独立子目录** `uploads/aividfromppt/` 来存储文件
+- 这样可以避免在共享 PVC 中扫描其他服务的文件，提升性能
+- 文件按日期组织：`uploads/aividfromppt/YYYY/MM/DD/`
+
+### 性能优化
+- `/list` 接口支持分页：`?limit=100&offset=0`
+- 支持深度限制：`?max_depth=5` 防止扫描过深目录
+- 默认最多返回 100 个文件
+
 ## 项目结构
 
 ```

@@ -22,9 +22,10 @@ def get_upload_directory() -> Path:
     Returns:
         Path: Path to the upload directory
     """
-    # Use date-based directory structure: uploads/YYYY/MM/DD
+    # Use app-specific subdirectory to isolate from other services in shared PVC
+    # Structure: uploads/aividfromppt/YYYY/MM/DD
     now = datetime.now()
-    upload_dir = Path("uploads") / str(now.year) / f"{now.month:02d}" / f"{now.day:02d}"
+    upload_dir = Path("uploads") / "aividfromppt" / str(now.year) / f"{now.month:02d}" / f"{now.day:02d}"
     upload_dir.mkdir(parents=True, exist_ok=True)
     return upload_dir
 
