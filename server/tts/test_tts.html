@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        select, textarea, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .result.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .audio-player {
+            margin-top: 15px;
+            width: 100%;
+        }
+        .metadata {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .metadata div {
+            padding: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔊 TTS API Test</h1>
+        
+        <form id="ttsForm">
+            <div class="form-group">
+                <label for="channel">TTS Channel:</label>
+                <select id="channel" name="channel" required>
+                    <option value="openai">OpenAI</option>
+                    <!-- Add more channels here when available -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="voice">Voice:</label>
+                <select id="voice" name="voice" required>
+                    <option value="alloy">Alloy</option>
+                    <option value="echo">Echo</option>
+                    <option value="fable">Fable</option>
+                    <option value="onyx">Onyx</option>
+                    <option value="nova">Nova</option>
+                    <option value="shimmer">Shimmer</option>
+                    <option value="coral" selected>Coral</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="text">Text to Speech:</label>
+                <textarea id="text" name="text" required placeholder="Enter the text you want to convert to speech...">Today is a wonderful day to build something people love!</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="model">Model (Optional):</label>
+                <input type="text" id="model" name="model" value="gpt-4o-mini-tts" placeholder="gpt-4o-mini-tts">
+            </div>
+
+            <div class="form-group">
+                <label for="instructions">Instructions (Optional):</label>
+                <input type="text" id="instructions" name="instructions" placeholder="Speak in a cheerful and positive tone.">
+            </div>
+
+            <button type="submit" id="submitBtn">Generate Speech</button>
+        </form>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('ttsForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const resultDiv = document.getElementById('result');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Generating...';
+            
+            // Hide previous result
+            resultDiv.style.display = 'none';
+            resultDiv.className = 'result';
+            
+            // Prepare form data
+            const formData = {
+                channel: document.getElementById('channel').value,
+                voice: document.getElementById('voice').value,
+                text: document.getElementById('text').value,
+                model: document.getElementById('model').value,
+                instructions: document.getElementById('instructions').value
+            };
+
+            try {
+                const response = await fetch('/api/v1/tts/synthesize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Success
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h3>✅ Speech Generated Successfully!</h3>
+                        <audio controls class="audio-player" src="${data.file_url}">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <div class="metadata">
+                            <div><strong>Duration:</strong> ${data.duration.toFixed(2)} seconds</div>
+                            <div><strong>File Size:</strong> ${(data.file_size / 1024).toFixed(2)} KB</div>
+                            <div><strong>Voice:</strong> ${data.voice}</div>
+                            <div><strong>Channel:</strong> ${data.channel}</div>
+                            <div><strong>Created:</strong> ${data.created_at}</div>
+                            <div><strong>File URL:</strong> <a href="${data.file_url}" target="_blank">Download</a></div>
+                        </div>
+                    `;
+                    resultDiv.style.display = 'block';
+                } else {
+                    // Error from API
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h3>❌ Error</h3>
+                        <p>${data.detail || 'Unknown error occurred'}</p>
+                    `;
+                    resultDiv.style.display = 'block';
+                }
+            } catch (error) {
+                // Network error
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>❌ Network Error</h3>
+                    <p>${error.message}</p>
+                `;
+                resultDiv.style.display = 'block';
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Generate Speech';
+            }
+        });
+    </script>
+</body>
+</html>
+
