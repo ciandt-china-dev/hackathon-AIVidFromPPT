@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>虚拟数字人测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+        }
+
+        .form-section h2 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        textarea, input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus, input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result-section.show {
+            display: block;
+        }
+
+        .result-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .video-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .video-item.error {
+            border-left-color: #e74c3c;
+        }
+
+        .video-item.success {
+            border-left-color: #2ecc71;
+        }
+
+        .video-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .video-info {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .video-url {
+            margin-top: 10px;
+        }
+
+        .video-url a {
+            color: #667eea;
+            text-decoration: none;
+            word-break: break-all;
+            font-size: 13px;
+        }
+
+        .video-url a:hover {
+            text-decoration: underline;
+        }
+
+        .video-player {
+            margin-top: 15px;
+            width: 100%;
+            height: auto;
+            border-radius: 6px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        .api-info {
+            margin-top: 30px;
+            padding: 15px;
+            background: #e8f4f8;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .api-info h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .api-info code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👤 虚拟数字人测试</h1>
+        <p class="subtitle">生成带口型同步的虚拟数字人视频</p>
+
+        <!-- Video generation form -->
+        <div class="form-section">
+            <h2>生成视频</h2>
+            <div class="form-group">
+                <label for="text">文本内容</label>
+                <textarea id="text" placeholder="请输入要生成口型的文本内容" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="audioFile">音频文件路径</label>
+                <input type="text" id="audioFile" value="voice/voice.mp3" placeholder="音频文件路径">
+            </div>
+            <div class="form-group">
+                <label for="gender">性别</label>
+                <select id="gender">
+                    <option value="1">男性</option>
+                    <option value="0">女性</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="charInterval">字符间隔 (秒)</label>
+                <input type="text" id="charInterval" value="0.5" placeholder="字符间隔">
+            </div>
+            <button onclick="generateVideo()" id="generateBtn">
+                <span>生成视频</span>
+            </button>
+        </div>
+
+        <!-- Results section -->
+        <div class="result-section" id="resultSection">
+            <h3>生成结果</h3>
+            <div id="results"></div>
+        </div>
+
+        <!-- API Information -->
+        <div class="api-info">
+            <h3>📌 API 端点信息</h3>
+            <p style="margin-bottom: 8px; font-size: 13px;">
+                <strong>生成视频:</strong> <code>POST /api/v1/virtual/generate-video</code>
+            </p>
+            <p style="font-size: 13px;">
+                <strong>视频访问:</strong> <code>GET /virtual/videos/{filename}</code>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000/api/v1/virtual';
+
+        function showLoading(buttonId) {
+            const btn = document.getElementById(buttonId);
+            btn.disabled = true;
+            btn.innerHTML = '<span>生成中</span><span class="loading"></span>';
+        }
+
+        function hideLoading(buttonId, text) {
+            const btn = document.getElementById(buttonId);
+            btn.disabled = false;
+            btn.innerHTML = `<span>${text}</span>`;
+        }
+
+        function displayResult(result) {
+            const resultsDiv = document.getElementById('results');
+            const resultSection = document.getElementById('resultSection');
+            
+            resultsDiv.innerHTML = '';
+            resultSection.classList.add('show');
+            
+            const videoItem = document.createElement('div');
+            videoItem.className = `video-item ${result.success ? 'success' : 'error'}`;
+            
+            if (result.success) {
+                videoItem.innerHTML = `
+                    <div class="video-name">✅ 视频生成成功</div>
+                    <div class="video-info">视频ID: ${result.video_id}</div>
+                    <div class="video-info">消息: ${result.message}</div>
+                    <div class="video-url">
+                        <strong>视频链接:</strong><br>
+                        <a href="http://localhost:8000${result.video_url}" target="_blank">http://localhost:8000${result.video_url}</a>
+                    </div>
+                    <video class="video-player" controls>
+                        <source src="http://localhost:8000${result.video_url}" type="video/mp4">
+                        您的浏览器不支持视频播放。
+                    </video>
+                `;
+            } else {
+                videoItem.innerHTML = `
+                    <div class="video-name">❌ 视频生成失败</div>
+                    <div class="error-message">${result.message || '生成失败'}</div>
+                `;
+            }
+            
+            resultsDiv.appendChild(videoItem);
+        }
+
+        function displayError(message) {
+            const resultsDiv = document.getElementById('results');
+            const resultSection = document.getElementById('resultSection');
+            
+            resultsDiv.innerHTML = `<div class="error-message">❌ ${message}</div>`;
+            resultSection.classList.add('show');
+        }
+
+        async function generateVideo() {
+            const text = document.getElementById('text').value;
+            const audioFile = document.getElementById('audioFile').value;
+            const gender = parseInt(document.getElementById('gender').value);
+            const charInterval = parseFloat(document.getElementById('charInterval').value);
+            
+            if (!text) {
+                alert('请输入文本内容');
+                return;
+            }
+            
+            showLoading('generateBtn');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/generate-video`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        audio_file: audioFile,
+                        gender: gender,
+                        char_interval: charInterval
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResult(data);
+                } else {
+                    displayError(data.detail || '生成失败');
+                }
+            } catch (error) {
+                displayError('网络错误: ' + error.message);
+            } finally {
+                hideLoading('generateBtn', '生成视频');
+            }
+        }
+    </script>
+</body>
+</html>
