@@ -69,3 +69,12 @@ dist/
 dmypy.json 
 .setup/
 uploads/
+
+# Video Synthesizer
+video-synthesizer/temp/
+video-synthesizer/output/
+video-synthesizer/venv/
+video-synthesizer/test/test_data/*.mp4
+video-synthesizer/test/test_output.mp4
+video-synthesizer/api.log
+video-synthesizer/.DS_Store
