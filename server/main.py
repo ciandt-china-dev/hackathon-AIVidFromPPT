@@ -3,13 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from upload.api import router as upload_router
 from tts.api import router as tts_router
+from video.api import router as video_router
 from fastapi_mcp import FastApiMCP
 from pathlib import Path
 
 # Create FastAPI app instance
 app = FastAPI(
     title="FastAPI Project",
-    description="A FastAPI project template with system monitoring, file upload and TTS capabilities",
+    description="A FastAPI project template with system monitoring, file upload, TTS and video synthesis capabilities",
     version="1.0.0"
 )
 
@@ -25,6 +26,7 @@ app.add_middleware(
 # Include routers
 app.include_router(upload_router, prefix="/api/v1")
 app.include_router(tts_router, prefix="/api/v1")
+app.include_router(video_router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
