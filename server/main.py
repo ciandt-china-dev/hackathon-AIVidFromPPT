@@ -1,9 +1,11 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from upload.api import router as upload_router
 from tts.api import router as tts_router
 from video.api import router as video_router
+from virtual.api import router as virtual_router
 from fastapi_mcp import FastApiMCP
 from pathlib import Path
 
@@ -27,6 +29,7 @@ app.add_middleware(
 app.include_router(upload_router, prefix="/api/v1")
 app.include_router(tts_router, prefix="/api/v1")
 app.include_router(video_router, prefix="/api/v1")
+app.include_router(virtual_router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
@@ -59,6 +62,15 @@ async def get_tts_test_page():
     return FileResponse(html_file, media_type="text/html")
 
 
+@app.get("/virtual/test_virtual.html")
+async def get_virtual_human_test_page():
+    """
+    Serve virtual human test page
+    """
+    html_file = Path(__file__).parent / "virtual" / "test_virtual.html"
+    if not html_file.exists():
+        return {"error": "Test page not found"}
+    return FileResponse(html_file, media_type="text/html")
 
 # File Upload API MCP
 upload_mcp = FastApiMCP(
@@ -77,6 +89,10 @@ tts_mcp = FastApiMCP(
 # Mount MCP endpoints
 upload_mcp.mount_http(mount_path="/upload-mcp")
 tts_mcp.mount_http(mount_path="/tts-mcp")
+
+# Mount virtual human videos directory for static file serving
+virtual_videos_dir = Path(__file__).parent / "virtual" / "videos"
+app.mount("/virtual/videos", StaticFiles(directory=virtual_videos_dir), name="virtual_human_videos")
 
 if __name__ == "__main__":
     import uvicorn
