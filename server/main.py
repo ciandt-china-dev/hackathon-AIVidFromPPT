@@ -6,13 +6,14 @@ from upload.api import router as upload_router
 from tts.api import router as tts_router
 from video.api import router as video_router
 from virtual.api import router as virtual_router
+from pptToImg.api import router as pptToImg_router
 from fastapi_mcp import FastApiMCP
 from pathlib import Path
 
 # Create FastAPI app instance
 app = FastAPI(
     title="FastAPI Project",
-    description="A FastAPI project template with system monitoring, file upload, TTS and video synthesis capabilities",
+    description="A FastAPI project template with system monitoring, file upload, TTS, video synthesis, and PPT to image conversion capabilities",
     version="1.0.0"
 )
 
@@ -30,6 +31,7 @@ app.include_router(upload_router, prefix="/api/v1")
 app.include_router(tts_router, prefix="/api/v1")
 app.include_router(video_router, prefix="/api/v1")
 app.include_router(virtual_router, prefix="/api/v1")
+app.include_router(pptToImg_router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
