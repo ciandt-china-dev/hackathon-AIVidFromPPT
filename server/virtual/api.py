@@ -1,6 +1,9 @@
 import re, itertools
 import numpy as np
 import uuid
+import tempfile
+import os
+import requests
 from pypinyin import lazy_pinyin, Style
 from moviepy.editor import concatenate_videoclips, ImageClip, AudioFileClip
 from PIL import Image
@@ -131,6 +134,57 @@ def build_smooth_video(vis_seq, fps, char_interval, blend_n, lip_dir):
         return concatenate_videoclips(clips, method="compose")
     except Exception as e:
         raise Exception(f"拼接视频片段失败: {str(e)}")
+    
+    
+def _load_audio_robust(audio_file_path_or_url):
+        """
+        稳健加载音频：支持本地路径和 http/https 远程 URL
+        自动处理下载、流式写入、临时文件清理
+        """
+        # 1. 本地文件直接加载（最快）
+        if os.path.isfile(audio_file_path_or_url):
+            return AudioFileClip(audio_file_path_or_url)
+
+        # 2. 远程 URL：先下载到临时文件再加载（解决 FFmpeg probe 失败问题）
+        if audio_file_path_or_url.startswith(("http://", "https://")):
+            print(f"正在下载远程音频文件: {audio_file_path_or_url}")
+            try:
+                # 流式下载，防止大文件爆内存
+                response = requests.get(audio_file_path_or_url, stream=True, timeout=30)
+                response.raise_for_status()
+
+                # 创建命名临时文件（带 .mp3 后缀有助于 MoviePy 识别）
+                suffix = os.path.splitext(audio_file_path_or_url)[1] or ".mp3"
+                tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+                try:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            tmp_file.write(chunk)
+                    tmp_file.close()
+
+                    # 用临时文件创建 AudioClip
+                    audio = AudioFileClip(tmp_file.name)
+                    
+                    # 注册清理函数，确保最终一定删除临时文件
+                    def _cleanup():
+                        try:
+                            os.unlink(tmp_file.name)
+                        except:
+                            pass
+                    audio._cleanup = _cleanup  # 简单挂钩，MoviePy 关闭时会尝试清理
+                    return audio
+                except:
+                    # 下载或写入失败也要删掉残留文件
+                    try:
+                        os.unlink(tmp_file.name)
+                    except:
+                        pass
+                    raise
+            except requests.RequestException as e:
+                raise ConnectionError(f"下载音频失败: {e}")
+
+        # 3. 其他情况（比如 file:// 协议等）直接交给 MoviePy 尝试
+        return AudioFileClip(audio_file_path_or_url)    
 
 # ---------- 封装的生成视频方法 ----------
 def generate_video(text, output_video, audio_file, fps=30, char_interval=0.5, blend_n=5, gender=1):
@@ -140,7 +194,7 @@ def generate_video(text, output_video, audio_file, fps=30, char_interval=0.5, bl
     Args:
         text: 用于口型同步的文本内容
         output_video: 输出视频文件路径
-        audio_file: 音频文件路径
+        audio_file: 音频文件地址
         fps: 视频帧率
         char_interval: 每个字符的持续时间（秒）
         blend_n: 口型过渡的帧数
@@ -171,16 +225,12 @@ def generate_video(text, output_video, audio_file, fps=30, char_interval=0.5, bl
     # 生成平滑视频
     video_clip = build_smooth_video(vis_seq, fps, char_interval, blend_n, str(lip_dir))
 
-    # 添加音频
-    if not Path(audio_file).exists():
-        raise FileNotFoundError(f"音频文件不存在: {audio_file}")
-    
     try:
-        audio_clip = AudioFileClip(audio_file)
+        audio_clip = _load_audio_robust(audio_file)
         final_clip = video_clip.set_audio(audio_clip)  # 音画对位
         # 如果音频更长，让视频自动延长到音频尾
-        final_clip = final_clip.set_duration(audio_clip.duration)
-        
+        if audio_clip.duration > video_clip.duration:
+            final_clip = final_clip.set_duration(audio_clip.duration)
         # 输出视频文件
         final_clip.write_videofile(
             output_video,
@@ -213,7 +263,7 @@ def generate_video(text, output_video, audio_file, fps=30, char_interval=0.5, bl
     
     参数说明：
     - text: 用于口型同步的文本内容
-    - audio_file: 音频文件路径
+    - audio_file: 音频文件地址
     - gender: 说话者性别 (1 为男性, 0 为女性)
     - char_interval: 每个字符的持续时间（秒）
     
@@ -224,10 +274,6 @@ def api_generate(req: GenerateVideoRequest):
     # 验证文本内容
     if not req.text:
         raise HTTPException(status_code=400, detail="文本内容不能为空")
-    
-    # 验证音频文件是否存在
-    if not Path(req.audio_file).exists():
-        raise HTTPException(status_code=404, detail="音频文件不存在")
     
     # 验证性别参数
     if req.gender not in [0, 1]:
