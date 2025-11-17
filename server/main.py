@@ -91,7 +91,8 @@ upload_mcp.mount_http(mount_path="/upload-mcp")
 tts_mcp.mount_http(mount_path="/tts-mcp")
 
 # Mount virtual human videos directory for static file serving
-virtual_videos_dir = Path(__file__).parent / "virtual" / "videos"
+virtual_videos_dir = Path("uploads") / "aividfromppt" / "videos"
+virtual_videos_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/virtual/videos", StaticFiles(directory=virtual_videos_dir), name="virtual_human_videos")
 
 if __name__ == "__main__":
