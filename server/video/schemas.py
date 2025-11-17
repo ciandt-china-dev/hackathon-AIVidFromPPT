@@ -5,15 +5,15 @@ from typing import Optional, List
 class VideoSegment(BaseModel):
     """Video segment information"""
     order: int = Field(..., description="Segment order number")
-    video_url: str = Field(..., description="URL of the video file")
-    audio_url: Optional[str] = Field(default=None, description="URL of the audio file (optional)")
+    image_url: str = Field(..., description="URL of the image file")
+    audio_url: str = Field(..., description="URL of the audio file (required)")
     subtitle_url: Optional[str] = Field(default=None, description="URL of the subtitle file (optional)")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
                 "order": 1,
-                "video_url": "https://example.com/video1.mp4",
+                "image_url": "https://example.com/slide1.png",
                 "audio_url": "https://example.com/audio1.mp3",
                 "subtitle_url": "https://example.com/subtitle1.srt"
             }
@@ -30,13 +30,13 @@ class SynthesizeRequest(BaseModel):
                 "segments": [
                     {
                         "order": 1,
-                        "video_url": "https://example.com/video1.mp4",
+                        "image_url": "https://example.com/slide1.png",
                         "audio_url": "https://example.com/audio1.mp3",
                         "subtitle_url": "https://example.com/subtitle1.srt"
                     },
                     {
                         "order": 2,
-                        "video_url": "https://example.com/video2.mp4",
+                        "image_url": "https://example.com/slide2.png",
                         "audio_url": "https://example.com/audio2.mp3"
                     }
                 ]

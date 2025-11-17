@@ -1,6 +1,6 @@
 """
 Video synthesis core module
-Responsible for combining multiple video segments into a complete video
+Responsible for combining multiple image segments with audio into a complete video
 """
 
 import os
@@ -174,25 +174,36 @@ def add_subtitles_to_video(video_clip, subtitle_path):
     return video_with_subs
 
 
-def process_single_segment(video_path, audio_path=None, subtitle_path=None):
+def process_single_segment(image_path, audio_path, subtitle_path=None):
     """
-    Process a single video segment: replace audio, add subtitles
+    Process a single segment: convert image to video with audio duration, add subtitles
 
     Args:
-        video_path (str): Video file path
-        audio_path (str): Audio file path (optional)
+        image_path (str): Image file path
+        audio_path (str): Audio file path (required)
         subtitle_path (str): Subtitle file path (optional)
 
     Returns:
         VideoFileClip: Processed video segment
     """
-    # Load video
-    video_clip = VideoFileClip(video_path)
+    # Load audio to get duration
+    audio_clip = AudioFileClip(audio_path)
+    audio_duration = audio_clip.duration
 
-    # If audio is provided, replace video audio
-    if audio_path:
-        audio_clip = AudioFileClip(audio_path)
-        video_clip = video_clip.set_audio(audio_clip)
+    # Load image and create video clip with audio duration
+    img = Image.open(image_path)
+    # Convert image to RGB if necessary (remove alpha channel)
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
+
+    # Create ImageClip with audio duration
+    video_clip = ImageClip(np.array(img), duration=audio_duration)
+
+    # Set video FPS (frames per second)
+    video_clip = video_clip.set_fps(24)
+
+    # Attach audio to video
+    video_clip = video_clip.set_audio(audio_clip)
 
     # If subtitle is provided, add subtitle
     if subtitle_path:
@@ -203,12 +214,12 @@ def process_single_segment(video_path, audio_path=None, subtitle_path=None):
 
 def synthesize_video(segments_data, output_path="output/final_video.mp4", transition_duration=0.5):
     """
-    Synthesize final video
+    Synthesize final video from image and audio segments
 
     Args:
         segments_data (list): Segment data list, each element contains:
-            - video_path: Video file path
-            - audio_path: Audio file path (optional)
+            - image_path: Image file path
+            - audio_path: Audio file path (required)
             - subtitle_path: Subtitle file path (optional)
         output_path (str): Output video file path
         transition_duration (float): Transition duration (seconds), default 0.5 seconds
@@ -220,7 +231,7 @@ def synthesize_video(segments_data, output_path="output/final_video.mp4", transi
     if transition_duration > 0:
         print(f"Using crossfade transition effect, transition duration: {transition_duration} seconds")
 
-    # Process each video segment
+    # Process each segment
     processed_clips = []
     total_segments = len(segments_data)
 
@@ -228,8 +239,8 @@ def synthesize_video(segments_data, output_path="output/final_video.mp4", transi
         print(f"Processing segment {i}...")
 
         clip = process_single_segment(
-            video_path=segment['video_path'],
-            audio_path=segment.get('audio_path'),
+            image_path=segment['image_path'],
+            audio_path=segment['audio_path'],
             subtitle_path=segment.get('subtitle_path')
         )
 
