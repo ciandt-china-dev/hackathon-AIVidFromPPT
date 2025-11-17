@@ -1,6 +1,6 @@
 """
 File download module
-Responsible for downloading video, audio and subtitle files from URLs to local temporary directory
+Responsible for downloading image, audio and subtitle files from URLs to local temporary directory
 """
 
 import os
@@ -71,31 +71,28 @@ def download_file(url, save_dir="temp"):
 
 def download_segment_files(segment, save_dir="temp"):
     """
-    Download all material files (video, audio, subtitle) for a single video segment
+    Download all material files (image, audio, subtitle) for a single segment
 
     Args:
-        segment (dict): Dictionary containing video segment information
-            - video_url: Video URL (required)
-            - audio_url: Audio URL (optional)
+        segment (dict): Dictionary containing segment information
+            - image_url: Image URL (required)
+            - audio_url: Audio URL (required)
             - subtitle_url: Subtitle URL (optional)
         save_dir (str): Save directory
 
     Returns:
         dict: Dictionary containing local file paths
-            - video_path: Video file path
-            - audio_path: Audio file path (if available)
+            - image_path: Image file path
+            - audio_path: Audio file path
             - subtitle_path: Subtitle file path (if available)
     """
     result = {}
 
-    # Download video file (required)
-    result['video_path'] = download_file(segment['video_url'], save_dir)
+    # Download image file (required)
+    result['image_path'] = download_file(segment['image_url'], save_dir)
 
-    # Download audio file (optional)
-    if segment.get('audio_url'):
-        result['audio_path'] = download_file(segment['audio_url'], save_dir)
-    else:
-        result['audio_path'] = None
+    # Download audio file (required)
+    result['audio_path'] = download_file(segment['audio_url'], save_dir)
 
     # Download subtitle file (optional)
     if segment.get('subtitle_url'):

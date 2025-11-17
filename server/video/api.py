@@ -28,16 +28,17 @@ executor = ThreadPoolExecutor(max_workers=4)
     operation_id="synthesize_video",
     summary="Synthesize Video",
     description="""
-    Synthesize multiple video segments into a single video.
-    
-    The API accepts a list of video segments, each containing:
+    Synthesize multiple image segments with audio into a single video.
+
+    The API accepts a list of segments, each containing:
     - order: Segment order number
-    - video_url: URL of the video file (required)
-    - audio_url: URL of the audio file (optional, will replace video audio)
+    - image_url: URL of the image file (required)
+    - audio_url: URL of the audio file (required, determines video duration)
     - subtitle_url: URL of the subtitle file (optional, SRT format)
-    
+
+    Each image will be converted to a video segment with duration matching its audio.
     The segments will be processed in order and combined with crossfade transitions.
-    
+
     Returns:
     - video_id: Unique identifier for the synthesized video
     - video_url: URL to stream/watch the video
@@ -49,12 +50,12 @@ async def synthesize(
     synthesize_request: SynthesizeRequest
 ):
     """
-    Synthesize video from multiple segments.
-    
+    Synthesize video from multiple image and audio segments.
+
     Args:
         request: FastAPI request object (to get base URL)
         synthesize_request: Video synthesis request with segments
-    
+
     Returns:
         SynthesizeResponse: Synthesis result with video URLs
     """
@@ -84,7 +85,7 @@ async def synthesize(
         # Convert Pydantic models to dict for downloader
         for segment in segments:
             segment_dict = {
-                'video_url': segment.video_url,
+                'image_url': segment.image_url,
                 'audio_url': segment.audio_url,
                 'subtitle_url': segment.subtitle_url
             }
