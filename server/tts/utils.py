@@ -44,6 +44,22 @@ def generate_audio_filename(extension: str = "mp3") -> str:
     return unique_name
 
 
+def generate_subtitle_filename(audio_filename: str, extension: str = "srt") -> str:
+    """
+    Generate subtitle filename based on audio filename.
+    
+    Args:
+        audio_filename: Original audio filename
+        extension: Subtitle file extension (default: srt)
+    
+    Returns:
+        str: Subtitle filename with same base name as audio file
+    """
+    # Extract base name without extension
+    base_name = Path(audio_filename).stem
+    return f"{base_name}.{extension}"
+
+
 def get_audio_duration(file_path: Path) -> float:
     """
     Get audio file duration in seconds.

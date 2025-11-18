@@ -1,12 +1,14 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 from pathlib import Path
+from openai import OpenAI
 from tts.schemas import TTSRequest, TTSResponse
 from tts.providers import TTSProviderFactory
 from tts.utils import (
     get_current_time,
     get_tts_directory,
     generate_audio_filename,
+    generate_subtitle_filename,
     get_audio_duration,
     get_file_size
 )
@@ -90,6 +92,37 @@ async def synthesize_speech(
         relative_path = str(output_path)
         file_url = f"{base_url}/api/v1/tts/files/{relative_path}"
         
+        # Generate subtitle using OpenAI transcription
+        subtitle_path = None
+        subtitle_url = None
+        try:
+            # Initialize OpenAI client
+            client = OpenAI()
+            
+            # Generate subtitle filename
+            subtitle_filename = generate_subtitle_filename(filename)
+            subtitle_output_path = output_dir / subtitle_filename
+            
+            # Call OpenAI transcription API
+            with open(output_path, "rb") as audio_file:
+                transcript = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                    response_format="srt"
+                )
+            
+            # Save subtitle file
+            with open(subtitle_output_path, "w", encoding="utf-8") as f:
+                f.write(transcript)
+            
+            # Generate subtitle URL
+            subtitle_path = str(subtitle_output_path)
+            subtitle_url = f"{base_url}/api/v1/tts/files/{subtitle_path}"
+        except Exception as e:
+            # Log error but don't fail the request if subtitle generation fails
+            # Subtitle fields will remain None
+            print(f"Warning: Failed to generate subtitle: {str(e)}")
+        
         return TTSResponse(
             success=True,
             file_path=relative_path,
@@ -98,6 +131,8 @@ async def synthesize_speech(
             file_size=file_size,
             channel=tts_request.channel,
             voice=tts_request.voice,
+            subtitle_path=subtitle_path,
+            subtitle_url=subtitle_url,
             created_at=get_current_time()
         )
         
@@ -110,34 +145,43 @@ async def synthesize_speech(
 @router.get(
     "/files/{file_path:path}",
     operation_id="get_tts_file",
-    summary="Get TTS Audio File",
+    summary="Get TTS Audio or Subtitle File",
     description="""
-    Retrieve a generated TTS audio file by its path.
+    Retrieve a generated TTS audio file or subtitle file by its path.
     
-    This endpoint serves the generated audio files for playback or download.
+    This endpoint serves the generated audio files (MP3) and subtitle files (SRT) for playback or download.
     """
 )
 async def get_tts_file(file_path: str):
     """
-    Serve a TTS audio file.
+    Serve a TTS audio or subtitle file.
     
     Args:
-        file_path: Relative path to the audio file
+        file_path: Relative path to the audio or subtitle file
     
     Returns:
-        FileResponse: The requested audio file
+        FileResponse: The requested file
     """
     full_path = Path(file_path)
     
     if not full_path.exists():
-        raise HTTPException(status_code=404, detail="Audio file not found")
+        raise HTTPException(status_code=404, detail="File not found")
     
     if not full_path.is_file():
         raise HTTPException(status_code=400, detail="Path is not a file")
     
+    # Determine media type based on file extension
+    file_extension = full_path.suffix.lower()
+    media_type_map = {
+        ".mp3": "audio/mpeg",
+        ".srt": "text/srt",
+        ".vtt": "text/vtt"
+    }
+    media_type = media_type_map.get(file_extension, "application/octet-stream")
+    
     return FileResponse(
         full_path,
-        media_type="audio/mpeg",
+        media_type=media_type,
         filename=full_path.name
     )
 

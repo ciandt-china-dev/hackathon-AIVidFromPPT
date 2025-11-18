@@ -52,6 +52,8 @@ class TTSResponse(BaseModel):
     file_size: int = Field(..., description="File size in bytes")
     channel: str = Field(..., description="TTS provider used")
     voice: str = Field(..., description="Voice used")
+    subtitle_path: Optional[str] = Field(default=None, description="Relative path to the generated subtitle file (SRT)")
+    subtitle_url: Optional[str] = Field(default=None, description="URL to access the subtitle file")
     created_at: str = Field(..., description="Creation timestamp")
     
     class Config:
@@ -64,6 +66,8 @@ class TTSResponse(BaseModel):
                 "file_size": 83200,
                 "channel": "openai",
                 "voice": "coral",
+                "subtitle_path": "uploads/aividfromppt/tts/2025/01/15/abc123.srt",
+                "subtitle_url": "http://example.com/api/v1/tts/files/uploads/aividfromppt/tts/2025/01/15/abc123.srt",
                 "created_at": "2025-01-15 10:30:45"
             }
         }
