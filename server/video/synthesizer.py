@@ -1,12 +1,11 @@
 """
-Video synthesis core module
+Video synthesis core module - FFmpeg implementation
 Responsible for combining multiple image segments with audio into a complete video
 """
 
 import os
-from moviepy.editor import VideoFileClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips, ImageClip
-from PIL import Image, ImageDraw, ImageFont
-import numpy as np
+import subprocess
+import json
 
 
 def parse_srt_file(srt_path):
@@ -71,220 +70,380 @@ def srt_time_to_seconds(time_str):
     return h * 3600 + m * 60 + s + ms / 1000.0
 
 
-def create_subtitle_image(text, video_width, video_height, fontsize=40):
+def get_audio_duration(audio_path):
     """
-    Create subtitle image using Pillow
-    
+    Get audio file duration using FFprobe
+
     Args:
-        text (str): Subtitle text
-        video_width (int): Video width
-        video_height (int): Video height
-        fontsize (int): Font size
-    
+        audio_path (str): Audio file path
+
     Returns:
-        numpy.ndarray: Image array (RGBA format)
+        float: Duration in seconds
     """
-    # Create transparent background
-    img = Image.new('RGBA', (video_width, video_height), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    
-    # Try to use system font, support Chinese
-    try:
-        # macOS common Chinese fonts
-        font_paths = [
-            '/System/Library/Fonts/PingFang.ttc',  # macOS default Chinese font
-            '/System/Library/Fonts/STHeiti Light.ttc',
-            '/System/Library/Fonts/STHeiti Medium.ttc',
-            '/System/Library/Fonts/Hiragino Sans GB.ttc',
-        ]
-        font = None
-        for font_path in font_paths:
-            if os.path.exists(font_path):
-                font = ImageFont.truetype(font_path, fontsize)
-                break
-        if font is None:
-            font = ImageFont.load_default()
-    except Exception:
-        font = ImageFont.load_default()
-    
-    # Calculate text bounding box
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    
-    # Text position (bottom center)
-    x = (video_width - text_width) // 2
-    y = video_height - text_height - 50  # 50 pixels from bottom
-    
-    # Draw black semi-transparent background
-    padding = 10
-    bg_rect = [
-        x - padding,
-        y - padding,
-        x + text_width + padding,
-        y + text_height + padding
+    cmd = [
+        'ffprobe',
+        '-v', 'error',
+        '-show_entries', 'format=duration',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        audio_path
     ]
-    draw.rectangle(bg_rect, fill=(0, 0, 0, 180))
-    
-    # Draw white text
-    draw.text((x, y), text, font=font, fill=(255, 255, 255, 255))
-    
-    # Convert to numpy array
-    return np.array(img)
+
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    return float(result.stdout.strip())
 
 
-def add_subtitles_to_video(video_clip, subtitle_path):
+def get_video_info(video_path):
     """
-    Add subtitles to video
+    Get video dimensions and duration using FFprobe
 
     Args:
-        video_clip (VideoFileClip): Video segment object
-        subtitle_path (str): Subtitle file path
+        video_path (str): Video file path
 
     Returns:
-        CompositeVideoClip: Video segment with subtitles added
+        dict: Video information with keys 'width', 'height', 'duration'
     """
-    # Parse subtitle file
-    subtitles = parse_srt_file(subtitle_path)
+    cmd = [
+        'ffprobe',
+        '-v', 'error',
+        '-select_streams', 'v:0',
+        '-show_entries', 'stream=width,height,duration',
+        '-of', 'json',
+        video_path
+    ]
 
-    # Create subtitle image segment list
-    subtitle_clips = []
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    data = json.loads(result.stdout)
 
+    stream = data['streams'][0]
+    return {
+        'width': stream['width'],
+        'height': stream['height'],
+        'duration': float(stream.get('duration', 0))
+    }
+
+
+def srt_to_ass(srt_path, ass_path, font_name='STHeiti Medium'):
+    """
+    Convert SRT subtitle to ASS format with Chinese font support
+
+    Args:
+        srt_path (str): Input SRT file path
+        ass_path (str): Output ASS file path
+        font_name (str): Font name to use
+    """
+    subtitles = parse_srt_file(srt_path)
+
+    # ASS file header with Chinese font
+    ass_content = f"""[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 0
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,{font_name},48,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3,0,2,10,10,50,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+
+    # Convert subtitles to ASS format
     for sub in subtitles:
-        # Create subtitle image using Pillow
-        subtitle_img = create_subtitle_image(
-            sub['text'],
-            video_clip.w,
-            video_clip.h,
-            fontsize=40
-        )
-        
-        # Create ImageClip
-        img_clip = ImageClip(subtitle_img, ismask=False, transparent=True)
-        
-        # Set subtitle display time
-        img_clip = img_clip.set_start(sub['start']).set_end(sub['end'])
-        img_clip = img_clip.set_position(('center', 'center'))
-        
-        subtitle_clips.append(img_clip)
+        start_time = seconds_to_ass_time(sub['start'])
+        end_time = seconds_to_ass_time(sub['end'])
+        text = sub['text'].replace('\n', '\\N')
+        ass_content += f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{text}\n"
 
-    # Overlay subtitles on video
-    video_with_subs = CompositeVideoClip([video_clip] + subtitle_clips)
+    with open(ass_path, 'w', encoding='utf-8') as f:
+        f.write(ass_content)
 
-    return video_with_subs
+    print(f"Converted SRT to ASS: {ass_path}")
 
 
-def process_single_segment(image_path, audio_path, subtitle_path=None):
+def seconds_to_ass_time(seconds):
     """
-    Process a single segment: convert image to video with audio duration, add subtitles
+    Convert seconds to ASS time format (H:MM:SS.CS)
+
+    Args:
+        seconds (float): Time in seconds
+
+    Returns:
+        str: ASS time format
+    """
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    cs = int((seconds % 1) * 100)
+    return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
+
+
+def process_single_segment(image_path, audio_path, output_path, video_path=None, subtitle_path=None):
+    """
+    Process a single segment: convert image to video with audio duration, optionally overlay digital human video, add subtitles
 
     Args:
         image_path (str): Image file path
         audio_path (str): Audio file path (required)
+        output_path (str): Output video file path
+        video_path (str): Digital human video file path (optional)
         subtitle_path (str): Subtitle file path (optional)
 
     Returns:
-        VideoFileClip: Processed video segment
+        str: Output video file path
     """
-    # Load audio to get duration
-    audio_clip = AudioFileClip(audio_path)
-    audio_duration = audio_clip.duration
+    # Get audio duration
+    audio_duration = get_audio_duration(audio_path)
+    print(f"Audio duration: {audio_duration} seconds")
 
-    # Load image and create video clip with audio duration
-    img = Image.open(image_path)
-    # Convert image to RGB if necessary (remove alpha channel)
-    if img.mode != 'RGB':
-        img = img.convert('RGB')
+    # Build FFmpeg command
+    # Base: create video from image with audio
+    if video_path:
+        # Complex filter for overlaying digital human video
+        # 1. Create background video from image
+        # 2. Loop/trim digital human video to match audio duration
+        # 3. Scale digital human video to 1/5 of background width
+        # 4. Overlay at bottom-right corner
 
-    # Create ImageClip with audio duration
-    video_clip = ImageClip(np.array(img), duration=audio_duration)
+        # First, get video info to calculate scaling
+        video_info = get_video_info(video_path)
 
-    # Set video FPS (frames per second)
-    video_clip = video_clip.set_fps(24)
+        # Build complex filter
+        filter_complex = (
+            # Input 0 (image): loop and scale to create background
+            "[0:v]loop=loop=-1:size=1:start=0,scale=1920:1080,setsar=1,fps=24[bg];"
+            # Input 1 (digital human video): trim or loop to match duration
+            f"[1:v]trim=duration={audio_duration},setpts=PTS-STARTPTS,"
+            # Scale to 1/5 of background width (384 pixels), maintain aspect ratio
+            "scale=384:-1[human];"
+            # Overlay human video on background at bottom-right with 20px padding
+            "[bg][human]overlay=W-w-20:H-h-20[outv]"
+        )
 
-    # Attach audio to video
-    video_clip = video_clip.set_audio(audio_clip)
+        cmd = [
+            'ffmpeg',
+            '-y',  # Overwrite output file
+            '-loop', '1',  # Loop image
+            '-i', image_path,  # Input 0: background image
+            '-i', video_path,  # Input 1: digital human video
+            '-i', audio_path,  # Input 2: audio
+            '-filter_complex', filter_complex,
+            '-map', '[outv]',  # Use filtered video
+            '-map', '2:a',  # Use audio from input 2
+            '-c:v', 'libx264',
+            '-preset', 'medium',
+            '-crf', '23',
+            '-c:a', 'aac',
+            '-b:a', '192k',
+            '-t', str(audio_duration),  # Duration from audio
+            '-pix_fmt', 'yuv420p',
+            output_path
+        ]
+    else:
+        # Simple: just image + audio
+        cmd = [
+            'ffmpeg',
+            '-y',  # Overwrite output file
+            '-loop', '1',  # Loop image
+            '-i', image_path,  # Input: background image
+            '-i', audio_path,  # Input: audio
+            '-c:v', 'libx264',
+            '-preset', 'medium',
+            '-crf', '23',
+            '-tune', 'stillimage',
+            '-c:a', 'aac',
+            '-b:a', '192k',
+            '-t', str(audio_duration),  # Duration from audio
+            '-pix_fmt', 'yuv420p',
+            '-vf', 'scale=1920:1080,fps=24',
+            output_path
+        ]
 
-    # If subtitle is provided, add subtitle
+    # Execute FFmpeg command
+    print(f"Executing FFmpeg command...")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print(f"FFmpeg stderr: {result.stderr}")
+        raise RuntimeError(f"FFmpeg failed with return code {result.returncode}")
+
+    # If subtitles are provided, add them using drawtext filter (most reliable for Chinese)
     if subtitle_path:
-        video_clip = add_subtitles_to_video(video_clip, subtitle_path)
+        temp_output = output_path + '.temp.mp4'
+        os.rename(output_path, temp_output)
 
-    return video_clip
+        # Find available Chinese font file
+        font_paths = [
+            '/System/Library/Fonts/STHeiti Medium.ttc',
+            '/System/Library/Fonts/STHeiti Light.ttc',
+            '/System/Library/Fonts/PingFang.ttc',
+            '/System/Library/Fonts/Hiragino Sans GB.ttc',
+            '/Library/Fonts/Arial Unicode.ttf'
+        ]
+
+        font_file = None
+        for font_path in font_paths:
+            if os.path.exists(font_path):
+                font_file = font_path
+                break
+
+        if not font_file:
+            print("Warning: No Chinese font found, using fallback")
+            font_file = '/System/Library/Fonts/STHeiti Medium.ttc'
+
+        # Parse SRT file
+        subtitles = parse_srt_file(subtitle_path)
+
+        # Build drawtext filter chain for each subtitle
+        # Each subtitle becomes a separate drawtext that's enabled only during its time range
+        drawtext_filters = []
+
+        for i, sub in enumerate(subtitles):
+            # Escape text for FFmpeg (escape single quotes and colons)
+            text = sub['text'].replace("'", "'\\\\\\''").replace(':', '\\:')
+
+            # Enable subtitle only during its time range
+            enable_condition = f"between(t,{sub['start']},{sub['end']})"
+
+            # Build drawtext filter
+            drawtext = (
+                f"drawtext=fontfile='{font_file}'"
+                f":text='{text}'"
+                f":x=(w-text_w)/2"  # Center horizontally
+                f":y=h-th-50"  # 50px from bottom
+                f":fontsize=48"
+                f":fontcolor=white"
+                f":borderw=3"
+                f":bordercolor=black"
+                f":enable='{enable_condition}'"
+            )
+            drawtext_filters.append(drawtext)
+
+        # Combine all drawtext filters
+        vf_filter = ','.join(drawtext_filters)
+
+        # Add subtitles using drawtext filter
+        subtitle_cmd = [
+            'ffmpeg',
+            '-y',
+            '-i', temp_output,
+            '-vf', vf_filter,
+            '-c:v', 'libx264',
+            '-preset', 'medium',
+            '-crf', '23',
+            '-c:a', 'copy',
+            output_path
+        ]
+
+        print(f"Adding subtitles with drawtext using font: {font_file}")
+        print(f"Total {len(subtitles)} subtitle entries")
+        result = subprocess.run(subtitle_cmd, capture_output=True, text=True)
+
+        if result.returncode != 0:
+            print(f"FFmpeg subtitle stderr: {result.stderr}")
+            # Restore original if subtitle adding fails
+            os.rename(temp_output, output_path)
+        else:
+            # Remove temporary file
+            os.remove(temp_output)
+
+    print(f"Segment processed successfully: {output_path}")
+    return output_path
 
 
-def synthesize_video(segments_data, output_path="output/final_video.mp4", transition_duration=0.5):
+def synthesize_video(segments_data, output_path="output/final_video.mp4", transition_duration=0):
     """
     Synthesize final video from image and audio segments
+
+    Processing logic:
+    1. First synthesize each segment completely (image + audio + optional digital human video + optional subtitles)
+    2. Then concatenate the finished segment videos in order
 
     Args:
         segments_data (list): Segment data list, each element contains:
             - image_path: Image file path
             - audio_path: Audio file path (required)
-            - subtitle_path: Subtitle file path (optional)
+            - video_path: Digital human video file path (optional)
+            - subtitle_path: Subtitle file path (optional, starts from 0s for each segment)
         output_path (str): Output video file path
-        transition_duration (float): Transition duration (seconds), default 0.5 seconds
+        transition_duration (float): Transition duration (seconds), default 0 (no transition)
 
     Returns:
         str: Output video file path
     """
     print(f"Starting video synthesis, total {len(segments_data)} segments")
-    if transition_duration > 0:
-        print(f"Using crossfade transition effect, transition duration: {transition_duration} seconds")
 
-    # Process each segment
-    processed_clips = []
+    # Ensure output directory and temp directory exist
+    output_dir = os.path.dirname(output_path) or 'output'
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Create temp directory in the same parent as output directory
+    temp_dir = os.path.join(os.path.dirname(output_dir) or '.', 'temp')
+    os.makedirs(temp_dir, exist_ok=True)
+
+    # Step 1: Process and save each segment individually
+    segment_video_paths = []
     total_segments = len(segments_data)
 
     for i, segment in enumerate(segments_data, 1):
-        print(f"Processing segment {i}...")
+        print(f"Processing segment {i}/{total_segments}...")
 
-        clip = process_single_segment(
+        # Output path for this segment in temp directory
+        segment_output_path = os.path.join(temp_dir, f'segment_{i}.mp4')
+
+        # Process single segment completely
+        process_single_segment(
             image_path=segment['image_path'],
             audio_path=segment['audio_path'],
+            output_path=segment_output_path,
+            video_path=segment.get('video_path'),
             subtitle_path=segment.get('subtitle_path')
         )
 
-        # Apply fade in/out effect to achieve crossfade transition
-        if transition_duration > 0:
-            if i == 1:
-                # First segment: fade out only
-                clip = clip.fadeout(transition_duration)
-            elif i == total_segments:
-                # Last segment: fade in only
-                clip = clip.fadein(transition_duration)
-            else:
-                # Middle segments: fade in and fade out
-                clip = clip.fadein(transition_duration).fadeout(transition_duration)
+        segment_video_paths.append(segment_output_path)
 
-        processed_clips.append(clip)
+    # Step 2: Concatenate all segments using FFmpeg concat demuxer
+    print("Concatenating all segments...")
 
-    # Concatenate all segments
-    print("Concatenating all segments (with transition effects)...")
-    if transition_duration > 0:
-        # Use negative padding to achieve segment overlap, creating crossfade effect
-        final_clip = concatenate_videoclips(processed_clips, method="compose", padding=-transition_duration)
-    else:
-        final_clip = concatenate_videoclips(processed_clips, method="compose")
+    # Create concat file list in temp directory
+    concat_file_path = os.path.join(temp_dir, 'concat_list.txt')
+    with open(concat_file_path, 'w', encoding='utf-8') as f:
+        for seg_path in segment_video_paths:
+            # Use absolute path to avoid issues
+            abs_path = os.path.abspath(seg_path)
+            f.write(f"file '{abs_path}'\n")
 
-    # Ensure output directory and temp directory exist
-    os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
-    os.makedirs('temp', exist_ok=True)
+    # Concatenate using concat demuxer (fastest and most reliable)
+    concat_cmd = [
+        'ffmpeg',
+        '-y',
+        '-f', 'concat',
+        '-safe', '0',
+        '-i', concat_file_path,
+        '-c', 'copy',  # Stream copy for fastest concatenation
+        output_path
+    ]
 
-    # Output final video
-    print(f"Outputting video to: {output_path}")
-    final_clip.write_videofile(
-        output_path,
-        codec='libx264',
-        audio_codec='aac',
-        temp_audiofile=os.path.join('temp', 'temp-audio.m4a'),
-        remove_temp=True
-    )
+    print(f"Executing FFmpeg concatenation...")
+    result = subprocess.run(concat_cmd, capture_output=True, text=True)
 
-    # Release resources
-    for clip in processed_clips:
-        clip.close()
-    final_clip.close()
+    if result.returncode != 0:
+        print(f"FFmpeg concatenation stderr: {result.stderr}")
+        raise RuntimeError(f"FFmpeg concatenation failed with return code {result.returncode}")
+
+    # Clean up temporary segment files
+    print("Cleaning up temporary segment files...")
+    for seg_path in segment_video_paths:
+        try:
+            os.remove(seg_path)
+        except Exception as e:
+            print(f"Warning: Failed to remove temporary file {seg_path}: {e}")
+
+    # Clean up concat file
+    try:
+        os.remove(concat_file_path)
+    except Exception as e:
+        print(f"Warning: Failed to remove concat file {concat_file_path}: {e}")
 
     print("Video synthesis complete!")
     return output_path
-

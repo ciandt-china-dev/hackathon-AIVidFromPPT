@@ -28,6 +28,8 @@ ALLOWED_EXTENSIONS = {
     '.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm',
     # Audio
     '.mp3', '.wav', '.ogg', '.m4a', '.flac',
+    # Subtitles
+    '.srt', '.vtt', '.ass', '.ssa',
     # Archives
     '.zip', '.rar', '.7z', '.tar', '.gz',
     # Other
