@@ -8,7 +8,7 @@ class GenerateVideoRequest(BaseModel):
     audio_file: str = Field(default="voice/voice.mp3", description="Path to the audio file")
     gender: int = Field(default=1, description="Gender of the speaker (1 for male, 0 for female)")
     char_interval: float = Field(default=0.5, description="Duration per character in seconds")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -26,13 +26,13 @@ class GenerateVideoResponse(BaseModel):
     video_id: str = Field(..., description="Unique video identifier")
     video_url: str = Field(..., description="URL to access the generated video")
     message: str = Field(..., description="Response message")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
                 "success": True,
                 "video_id": "a1b2c3d4e5f6g7h8i9j0",
-                "video_url": "https://example.com/videos/a1b2c3d4e5f6g7h8i9j0.mp4",
+                "video_url": "https://example.com/api/v1/vitual/videos/a1b2c3d4e5f6g7h8i9j0.mp4",
                 "message": "视频生成成功"
             }
         }
@@ -42,7 +42,7 @@ class HealthResponse(BaseModel):
     """Health check response model"""
     status: str = Field(..., description="Service status")
     message: str = Field(..., description="Status message")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
