@@ -133,7 +133,8 @@ async def synthesize_speech(
             voice=tts_request.voice,
             subtitle_path=subtitle_path,
             subtitle_url=subtitle_url,
-            created_at=get_current_time()
+            oral_broadcast=tts_request.text,
+            created_at=get_current_time(),
         )
         
     except ValueError as e:

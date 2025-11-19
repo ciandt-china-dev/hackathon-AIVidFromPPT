@@ -54,6 +54,7 @@ class TTSResponse(BaseModel):
     voice: str = Field(..., description="Voice used")
     subtitle_path: Optional[str] = Field(default=None, description="Relative path to the generated subtitle file (SRT)")
     subtitle_url: Optional[str] = Field(default=None, description="URL to access the subtitle file")
+    oral_broadcast: str = Field(..., description="Original text used for TTS conversion")
     created_at: str = Field(..., description="Creation timestamp")
     
     class Config:
@@ -68,6 +69,7 @@ class TTSResponse(BaseModel):
                 "voice": "coral",
                 "subtitle_path": "uploads/aividfromppt/tts/2025/01/15/abc123.srt",
                 "subtitle_url": "http://example.com/api/v1/tts/files/uploads/aividfromppt/tts/2025/01/15/abc123.srt",
+                "oral_broadcast": "Today is a wonderful day to build something people love!",
                 "created_at": "2025-01-15 10:30:45"
             }
         }
