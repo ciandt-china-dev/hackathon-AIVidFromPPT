@@ -7,7 +7,8 @@ class VideoSegment(BaseModel):
     order: int = Field(..., description="Segment order number")
     image_url: str = Field(..., description="URL of the image file")
     audio_url: str = Field(..., description="URL of the audio file (required)")
-    subtitle_url: Optional[str] = Field(default=None, description="URL of the subtitle file (optional)")
+    video_url: Optional[str] = Field(default=None, description="URL of the digital human video file (optional)")
+    subtitle_url: Optional[str] = Field(default=None, description="URL of the subtitle file (optional, SRT format, starts from 0s)")
 
     class Config:
         json_schema_extra = {
@@ -15,6 +16,7 @@ class VideoSegment(BaseModel):
                 "order": 1,
                 "image_url": "https://example.com/slide1.png",
                 "audio_url": "https://example.com/audio1.mp3",
+                "video_url": "https://example.com/digital_human1.mp4",
                 "subtitle_url": "https://example.com/subtitle1.srt"
             }
         }
@@ -32,12 +34,14 @@ class SynthesizeRequest(BaseModel):
                         "order": 1,
                         "image_url": "https://example.com/slide1.png",
                         "audio_url": "https://example.com/audio1.mp3",
+                        "video_url": "https://example.com/digital_human1.mp4",
                         "subtitle_url": "https://example.com/subtitle1.srt"
                     },
                     {
                         "order": 2,
                         "image_url": "https://example.com/slide2.png",
-                        "audio_url": "https://example.com/audio2.mp3"
+                        "audio_url": "https://example.com/audio2.mp3",
+                        "video_url": "https://example.com/digital_human2.mp4"
                     }
                 ]
             }

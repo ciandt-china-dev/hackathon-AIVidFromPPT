@@ -34,10 +34,13 @@ executor = ThreadPoolExecutor(max_workers=4)
     - order: Segment order number
     - image_url: URL of the image file (required)
     - audio_url: URL of the audio file (required, determines video duration)
-    - subtitle_url: URL of the subtitle file (optional, SRT format)
+    - video_url: URL of the digital human video file (optional, will be overlaid on the image)
+    - subtitle_url: URL of the subtitle file (optional, SRT format, starts from 0s for each segment)
 
-    Each image will be converted to a video segment with duration matching its audio.
-    The segments will be processed in order and combined with crossfade transitions.
+    Processing logic:
+    1. Each segment is first synthesized completely with image + audio + optional digital human video + optional subtitles
+    2. The finished segment videos are then concatenated in order without crossfade transitions
+    3. Each subtitle file starts from 0 seconds (independent timing for each segment)
 
     Returns:
     - video_id: Unique identifier for the synthesized video
@@ -87,6 +90,7 @@ async def synthesize(
             segment_dict = {
                 'image_url': segment.image_url,
                 'audio_url': segment.audio_url,
+                'video_url': segment.video_url,
                 'subtitle_url': segment.subtitle_url
             }
             # Run download in thread pool (blocking operation)
