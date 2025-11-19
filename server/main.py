@@ -9,6 +9,19 @@ from virtual.api import router as virtual_router
 from pptToImg.api import router as pptToImg_router
 from fastapi_mcp import FastApiMCP
 from pathlib import Path
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+# Try to load from project root first, then from current directory
+env_path = Path(__file__).parent.parent / ".env"
+if not env_path.exists():
+    env_path = Path(__file__).parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
+else:
+    # Fallback to loading from current directory
+    load_dotenv()
 
 # Create FastAPI app instance
 app = FastAPI(
