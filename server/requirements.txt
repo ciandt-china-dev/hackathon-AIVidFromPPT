@@ -15,3 +15,4 @@ PyMuPDF>=1.23.0
 pdf2image==1.17.0
 mutagen>=1.47.0
 numpy==2.3.4
+moviepy==1.0.3
