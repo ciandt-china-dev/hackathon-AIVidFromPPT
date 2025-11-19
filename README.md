@@ -61,7 +61,17 @@ uvicorn main:app --host 0.0.0.0 --port 8201 --reload
 docker pull unhejing/aividfromppt:latest
 ```
 
-### 2. 运行容器
+### 2. 移除旧容器（如果存在）
+
+如果之前已经运行过容器，需要先停止并移除：
+
+```bash
+# 停止并删除旧容器
+docker stop aividfromppt 2>/dev/null || true
+docker rm aividfromppt 2>/dev/null || true
+```
+
+### 3. 运行容器
 
 ```bash
 docker run -d \
@@ -81,11 +91,16 @@ docker run -d \
 - `-e OPENAI_API_KEY`: 设置 OpenAI API Key 环境变量
 - `-v $(pwd)/server/uploads:/app/uploads`: 挂载数据卷，持久化上传文件
 
-### 3. 使用环境变量文件
+### 4. 使用环境变量文件
 
-也可以使用 `.env` 文件：
+也可以使用 `.env` 文件（同样需要先移除旧容器）：
 
 ```bash
+# 移除旧容器
+docker stop aividfromppt 2>/dev/null || true
+docker rm aividfromppt 2>/dev/null || true
+
+# 运行新容器
 docker run -d \
   --name aividfromppt \
   --restart=always \
@@ -95,7 +110,24 @@ docker run -d \
   unhejing/aividfromppt:latest
 ```
 
-### 4. 查看容器状态
+### 5. 一键部署脚本
+
+也可以使用以下命令一键完成（拉取、移除旧容器、运行新容器）：
+
+```bash
+docker pull unhejing/aividfromppt:latest && \
+docker stop aividfromppt 2>/dev/null || true && \
+docker rm aividfromppt 2>/dev/null || true && \
+docker run -d \
+  --name aividfromppt \
+  --restart=always \
+  -p 8201:8201 \
+  -e OPENAI_API_KEY="your-openai-api-key-here" \
+  -v $(pwd)/server/uploads:/app/uploads \
+  unhejing/aividfromppt:latest
+```
+
+### 6. 查看容器状态
 
 ```bash
 # 查看运行中的容器

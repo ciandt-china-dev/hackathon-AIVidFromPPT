@@ -13,3 +13,4 @@ requests>=2.31.0
 pypinyin>=0.55.0
 PyMuPDF>=1.23.0
 pdf2image==1.17.0
+mutagen>=1.47.0
