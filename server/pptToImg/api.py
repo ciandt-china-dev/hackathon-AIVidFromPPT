@@ -2,12 +2,14 @@ import os
 import uuid
 import shutil
 import mimetypes
-from typing import List, Dict
+import json
+from typing import List, Dict, Any
 from urllib.parse import quote
 from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, Request, Query
 from fastapi.responses import JSONResponse, FileResponse
+from pydantic import BaseModel
 
 from pptToImg.schemas import PPTUploadResponse, ImageInfo
 from pptToImg.utils import (
@@ -20,6 +22,70 @@ router = APIRouter(
     prefix="/pptToImg",
     tags=["pptToImg"]
 )
+
+
+# context data dir under temp root
+_CONTEXT_DATA_DIR: Path = get_ppt_temp_directory() / "context_data"
+_CONTEXT_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+
+class ContextUpload(BaseModel):
+    uuid: str
+    item: Dict[str, Any]
+
+
+class ContextUpdate(BaseModel):
+    uuid: str
+    item: Dict[str, Any]
+
+
+class ContextDelete(BaseModel):
+    uuid: str
+    id: str
+
+
+def _uuid_dir_for_context(u: str) -> Path:
+    d = _CONTEXT_DATA_DIR / u
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _items_path_for_context(u: str) -> Path:
+    return _uuid_dir_for_context(u) / "items.json"
+
+
+def _load_context_items(u: str) -> List[Dict]:
+    p = _items_path_for_context(u)
+    if not p.exists():
+        return []
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+            return []
+    except json.JSONDecodeError:
+        return []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"读取上下文数据失败: {e}")
+
+
+def _save_context_items(u: str, items: List[Dict]) -> None:
+    p = _items_path_for_context(u)
+    tmp = str(p) + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(items, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, str(p))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"保存上下文数据失败: {e}")
+
+
+def _find_item_index(items: List[Dict], target_id: str) -> int:
+    for idx, it in enumerate(items):
+        if isinstance(it, dict) and str(it.get("id")) == str(target_id):
+            return idx
+    return -1
 
 
 @router.post(
@@ -161,4 +227,52 @@ async def get_image(
         real_path,
         media_type=media_type
     )
+
+
+@router.post("/context")
+async def add_context(body: ContextUpload) -> JSONResponse:
+    items = _load_context_items(body.uuid)
+    if not isinstance(body.item, dict):
+        raise HTTPException(status_code=400, detail="item 必须是对象")
+    item_id = body.item.get("id")
+    if item_id is None or not isinstance(item_id, (str, int)):
+        raise HTTPException(status_code=400, detail="item.id 必须存在且为字符串或数字")
+    if _find_item_index(items, str(item_id)) != -1:
+        raise HTTPException(status_code=409, detail="该 uuid 下的 id 已存在，请使用更新接口")
+    items.append(body.item)
+    _save_context_items(body.uuid, items)
+    return JSONResponse({"uuid": body.uuid, "count": len(items)})
+
+
+@router.put("/context")
+async def update_context(body: ContextUpdate) -> JSONResponse:
+    items = _load_context_items(body.uuid)
+    if not isinstance(body.item, dict):
+        raise HTTPException(status_code=400, detail="item 必须是对象")
+    item_id = body.item.get("id")
+    if item_id is None:
+        raise HTTPException(status_code=400, detail="item.id 必须存在")
+    idx = _find_item_index(items, str(item_id))
+    if idx == -1:
+        raise HTTPException(status_code=404, detail="未找到待更新的数据")
+    items[idx] = body.item
+    _save_context_items(body.uuid, items)
+    return JSONResponse({"uuid": body.uuid, "item": body.item})
+
+
+@router.delete("/context")
+async def delete_context(body: ContextDelete) -> JSONResponse:
+    items = _load_context_items(body.uuid)
+    idx = _find_item_index(items, str(body.id))
+    if idx == -1:
+        raise HTTPException(status_code=404, detail="未找到待删除的数据")
+    items.pop(idx)
+    _save_context_items(body.uuid, items)
+    return JSONResponse({"uuid": body.uuid, "deleted_id": str(body.id), "count": len(items)})
+
+
+@router.get("/context/{uuid}")
+def list_context(uuid: str) -> JSONResponse:
+    items = _load_context_items(uuid)
+    return JSONResponse({"uuid": uuid, "count": len(items), "items": items})
 
