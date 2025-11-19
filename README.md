@@ -74,9 +74,26 @@ docker rm aividfromppt 2>/dev/null || true
 ### 3. 运行容器
 
 ```bash
+# 先拉取最新镜像
+docker pull unhejing/aividfromppt:latest
+
+# 运行容器
 docker run -d \
   --name aividfromppt \
   --restart=always \
+  -p 8201:8201 \
+  -e OPENAI_API_KEY="your-openai-api-key-here" \
+  -v $(pwd)/server/uploads:/app/uploads \
+  unhejing/aividfromppt:latest
+```
+
+或者使用 `--pull always` 参数（Docker 20.10+ 支持）：
+
+```bash
+docker run -d \
+  --name aividfromppt \
+  --restart=always \
+  --pull always \
   -p 8201:8201 \
   -e OPENAI_API_KEY="your-openai-api-key-here" \
   -v $(pwd)/server/uploads:/app/uploads \
@@ -112,7 +129,7 @@ docker run -d \
 
 ### 5. 一键部署脚本
 
-也可以使用以下命令一键完成（拉取、移除旧容器、运行新容器）：
+也可以使用以下命令一键完成（拉取最新镜像、移除旧容器、运行新容器）：
 
 ```bash
 docker pull unhejing/aividfromppt:latest && \
@@ -121,6 +138,21 @@ docker rm aividfromppt 2>/dev/null || true && \
 docker run -d \
   --name aividfromppt \
   --restart=always \
+  -p 8201:8201 \
+  -e OPENAI_API_KEY="your-openai-api-key-here" \
+  -v $(pwd)/server/uploads:/app/uploads \
+  unhejing/aividfromppt:latest
+```
+
+或者使用 `--pull always` 参数（自动拉取最新镜像）：
+
+```bash
+docker stop aividfromppt 2>/dev/null || true && \
+docker rm aividfromppt 2>/dev/null || true && \
+docker run -d \
+  --name aividfromppt \
+  --restart=always \
+  --pull always \
   -p 8201:8201 \
   -e OPENAI_API_KEY="your-openai-api-key-here" \
   -v $(pwd)/server/uploads:/app/uploads \
