@@ -30,6 +30,7 @@ class TTSRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=4096, description="Text to convert to speech")
     model: Optional[str] = Field(default="gpt-4o-mini-tts", description="TTS model to use (OpenAI specific)")
     instructions: Optional[str] = Field(default=None, description="Additional instructions for voice tone/style")
+    img_url: Optional[str] = Field(default=None, description="Image URL to be returned in response")
     
     class Config:
         json_schema_extra = {
@@ -38,7 +39,8 @@ class TTSRequest(BaseModel):
                 "voice": "coral",
                 "text": "Today is a wonderful day to build something people love!",
                 "model": "gpt-4o-mini-tts",
-                "instructions": "Speak in a cheerful and positive tone."
+                "instructions": "Speak in a cheerful and positive tone.",
+                "img_url": "https://example.com/image.jpg"
             }
         }
 
@@ -55,6 +57,7 @@ class TTSResponse(BaseModel):
     subtitle_path: Optional[str] = Field(default=None, description="Relative path to the generated subtitle file (SRT)")
     subtitle_url: Optional[str] = Field(default=None, description="URL to access the subtitle file")
     oral_broadcast: str = Field(..., description="Original text used for TTS conversion")
+    img_url: str = Field(..., description="Image URL from request")
     created_at: str = Field(..., description="Creation timestamp")
     
     class Config:
@@ -70,6 +73,7 @@ class TTSResponse(BaseModel):
                 "subtitle_path": "uploads/aividfromppt/tts/2025/01/15/abc123.srt",
                 "subtitle_url": "http://example.com/api/v1/tts/files/uploads/aividfromppt/tts/2025/01/15/abc123.srt",
                 "oral_broadcast": "Today is a wonderful day to build something people love!",
+                "img_url": "https://example.com/image.jpg",
                 "created_at": "2025-01-15 10:30:45"
             }
         }

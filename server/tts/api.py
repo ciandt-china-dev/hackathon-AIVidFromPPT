@@ -134,6 +134,7 @@ async def synthesize_speech(
             subtitle_path=subtitle_path,
             subtitle_url=subtitle_url,
             oral_broadcast=tts_request.text,
+            img_url=tts_request.img_url or "",
             created_at=get_current_time(),
         )
         
