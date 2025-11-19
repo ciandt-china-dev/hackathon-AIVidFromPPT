@@ -273,7 +273,23 @@ def process_single_segment(image_path, audio_path, output_path, video_path=None,
         os.rename(output_path, temp_output)
 
         # Find available Chinese font file
+        # Support Windows, macOS, and Linux font paths
         font_paths = [
+            # Windows paths (common Chinese fonts)
+            'C:/Windows/Fonts/msyh.ttc',  # Microsoft YaHei
+            'C:/Windows/Fonts/msyhbd.ttc',  # Microsoft YaHei Bold
+            'C:/Windows/Fonts/simhei.ttf',  # SimHei (黑体)
+            'C:/Windows/Fonts/simsun.ttc',  # SimSun (宋体)
+            'C:/Windows/Fonts/simkai.ttf',  # KaiTi (楷体)
+            'C:/Windows/Fonts/STXIHEI.TTF',  # STXihei
+            # Linux paths (common Chinese fonts)
+            '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+            '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+            '/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf',
+            '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+            '/usr/share/fonts/truetype/arphic/uming.ttc',
+            '/usr/share/fonts/truetype/arphic/ukai.ttc',
+            # macOS paths
             '/System/Library/Fonts/STHeiti Medium.ttc',
             '/System/Library/Fonts/STHeiti Light.ttc',
             '/System/Library/Fonts/PingFang.ttc',
@@ -285,11 +301,26 @@ def process_single_segment(image_path, audio_path, output_path, video_path=None,
         for font_path in font_paths:
             if os.path.exists(font_path):
                 font_file = font_path
+                print(f"Found Chinese font: {font_file}")
                 break
 
         if not font_file:
-            print("Warning: No Chinese font found, using fallback")
-            font_file = '/System/Library/Fonts/STHeiti Medium.ttc'
+            print("Warning: No Chinese font found in standard locations")
+            print("Attempting to use system default font")
+            # Try to use fc-match to find a Chinese font on Linux/macOS
+            try:
+                result = subprocess.run(['fc-match', '-f', '%{file}', ':lang=zh'],
+                                        capture_output=True, text=True, timeout=5)
+                if result.returncode == 0 and result.stdout.strip():
+                    font_file = result.stdout.strip()
+                    print(f"Found font via fc-match: {font_file}")
+                else:
+                    # Last resort: try common font names
+                    font_file = 'Microsoft YaHei' if os.name == 'nt' else 'Arial'
+            except Exception as e:
+                print(f"Could not find font with fc-match: {e}")
+                # Use platform-specific fallback
+                font_file = 'Microsoft YaHei' if os.name == 'nt' else 'Arial'
 
         # Parse SRT file
         subtitles = parse_srt_file(subtitle_path)
