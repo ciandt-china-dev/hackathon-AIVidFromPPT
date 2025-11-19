@@ -23,6 +23,9 @@ COPY server/requirements.txt /app/requirements.txt
 
 RUN pip install -r requirements.txt
 
+# Copy .env file if it exists (will be copied from build context root)
+# If .env doesn't exist, this step will be skipped by build script
+COPY .env /app/.env
 
 # Copy the rest of the application
 COPY server/ /app

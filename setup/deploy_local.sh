@@ -95,6 +95,35 @@ if [[ "${LOGS}" == true ]]; then
   exit 0
 fi
 
+# Check for .env file in project root
+PROJECT_ROOT_ENV="${CONTEXT_DIR}/.env"
+ENV_FILE_CREATED=false
+
+if [[ ! -f "${PROJECT_ROOT_ENV}" ]]; then
+  echo "[warn] .env file not found in project root: ${PROJECT_ROOT_ENV}"
+  if [[ -f "${CONTEXT_DIR}/.env.example" ]]; then
+    echo "[info] Found .env.example, creating .env from template..."
+    cp "${CONTEXT_DIR}/.env.example" "${PROJECT_ROOT_ENV}"
+    ENV_FILE_CREATED=true
+    echo "[warn] Please edit .env file and add your actual API keys before building!"
+    if [[ "${BUILD}" == true ]] || [[ "${RESTART}" == true ]]; then
+      read -p "Press Enter to continue building or Ctrl+C to cancel and edit .env file..."
+    fi
+  else
+    echo "[warn] No .env.example found. Creating minimal .env file for build..."
+    echo "# Environment variables" > "${PROJECT_ROOT_ENV}"
+    echo "OPENAI_API_KEY=your-openai-api-key-here" >> "${PROJECT_ROOT_ENV}"
+    echo "FASTAPI_PORT=8201" >> "${PROJECT_ROOT_ENV}"
+    ENV_FILE_CREATED=true
+    echo "[warn] Created minimal .env file. Please edit it with your actual API keys!"
+    if [[ "${BUILD}" == true ]] || [[ "${RESTART}" == true ]]; then
+      read -p "Press Enter to continue building or Ctrl+C to cancel and edit .env file..."
+    fi
+  fi
+else
+  echo "[info] Found .env file: ${PROJECT_ROOT_ENV}"
+fi
+
 # Build image
 if [[ "${BUILD}" == true ]] || [[ "${RESTART}" == true ]]; then
   echo "[info] Building Docker image: ${FULL_IMAGE}"
@@ -123,23 +152,23 @@ fi
 # Prepare environment variables
 ENV_ARGS=()
 
-# Load environment variables from file if provided
-if [[ -n "${ENV_FILE}" ]]; then
-  if [[ -f "${ENV_FILE}" ]]; then
-    echo "[info] Loading environment variables from: ${ENV_FILE}"
-    # Use Docker's --env-file option
-    ENV_ARGS+=(--env-file "${ENV_FILE}")
-  else
-    echo "[warn] Environment file not found: ${ENV_FILE}"
-  fi
+# Default to using .env file from project root if not specified
+if [[ -z "${ENV_FILE}" ]]; then
+  ENV_FILE="${PROJECT_ROOT_ENV}"
 fi
 
-# Check for OPENAI_API_KEY in environment
-if [[ -z "${OPENAI_API_KEY:-}" ]] && [[ -z "${ENV_FILE}" ]]; then
-  echo "[warn] OPENAI_API_KEY not set in environment"
-  echo "[hint] Set it with: export OPENAI_API_KEY='your-key-here'"
-  echo "[hint] Or use: $(basename "$0") -e .env"
-elif [[ -n "${OPENAI_API_KEY:-}" ]]; then
+# Load environment variables from file if it exists
+if [[ -n "${ENV_FILE}" ]] && [[ -f "${ENV_FILE}" ]]; then
+  echo "[info] Loading environment variables from: ${ENV_FILE}"
+  # Use Docker's --env-file option
+  ENV_ARGS+=(--env-file "${ENV_FILE}")
+elif [[ -n "${ENV_FILE}" ]]; then
+  echo "[warn] Environment file not found: ${ENV_FILE}"
+fi
+
+# Also check for OPENAI_API_KEY in current environment (takes precedence)
+if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+  echo "[info] OPENAI_API_KEY found in environment, will override .env file"
   ENV_ARGS+=(-e "OPENAI_API_KEY=${OPENAI_API_KEY}")
 fi
 
