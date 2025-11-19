@@ -637,6 +637,7 @@ def api_generate(req: GenerateVideoRequest, request: Request):
         )
 
     subtitle_url = req.subtitle_url
+    img_url = req.img_url
 
     try:
         vid_name = f"{uuid.uuid4().hex}.mp4"
@@ -661,6 +662,7 @@ def api_generate(req: GenerateVideoRequest, request: Request):
             video_url=file_url,
             audio_url=req.audio_file,
             subtitle_url=subtitle_url,
+            img_url=img_url,
             message="视频生成成功",
         )
 
