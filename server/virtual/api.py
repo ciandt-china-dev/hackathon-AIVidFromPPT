@@ -5,7 +5,7 @@ import os
 import requests
 import subprocess
 from pypinyin import lazy_pinyin, Style
-from fastapi import APIRouter, FastAPI, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from virtual.shcemas import GenerateVideoRequest, GenerateVideoResponse
 from pathlib import Path
 import gc
@@ -122,25 +122,17 @@ def _load_audio_robust(audio_file_path_or_url, temp_dir):
 
 
 def get_audio_duration(audio_path):
-    """
-    获取音频时长（秒）
-    推荐版本：结合多种方法，快速且可靠
-    """
+    """获取音频时长（秒）"""
     import json
-    import re
 
-    #  处理可能的 tuple 输入
     if isinstance(audio_path, tuple):
         audio_path = audio_path[0]
 
-    # 转换为字符串
     audio_path = str(audio_path)
 
-    # 验证文件存在
     if not os.path.exists(audio_path):
         raise FileNotFoundError(f"音频文件不存在: {audio_path}")
 
-    # 方法1: JSON格式获取（最可靠且信息完整）
     try:
         cmd = [
             'ffprobe',
@@ -157,16 +149,13 @@ def get_audio_duration(audio_path):
         if result.returncode == 0 and result.stdout.strip():
             data = json.loads(result.stdout)
 
-            # 优先从 format 获取
             if 'format' in data and 'duration' in data['format']:
                 duration_str = str(data['format']['duration'])
                 if duration_str != 'N/A':
                     duration = float(duration_str)
                     if duration > 0:
-                        print(f"✓ 音频时长: {duration:.2f}秒")
                         return duration
 
-            # 备用：从音频流获取
             if 'streams' in data:
                 for stream in data['streams']:
                     if stream.get('codec_type') == 'audio' and 'duration' in stream:
@@ -174,361 +163,155 @@ def get_audio_duration(audio_path):
                         if duration_str != 'N/A':
                             duration = float(duration_str)
                             if duration > 0:
-                                print(f"✓ 音频时长(stream): {duration:.2f}秒")
                                 return duration
     except Exception as e:
-        print(f"JSON方法失败: {e}")
+        print(f"获取时长失败: {e}")
 
-    # 方法2: 从ffmpeg输出解析（兜底方案，最可靠）
-    try:
-        print("使用ffmpeg解析音频信息...")
-        cmd = ['ffmpeg', '-i', audio_path, '-f', 'null', '-']
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-
-        # 从stderr解析Duration
-        duration_match = re.search(
-            r'Duration:\s*(\d{2}):(\d{2}):(\d{2}\.\d{2})', result.stderr
-        )
-        if duration_match:
-            hours = int(duration_match.group(1))
-            minutes = int(duration_match.group(2))
-            seconds = float(duration_match.group(3))
-            duration = hours * 3600 + minutes * 60 + seconds
-            if duration > 0:
-                print(f"音频时长(ffmpeg): {duration:.2f}秒")
-                return duration
-    except Exception as e:
-        print(f"ffmpeg方法失败: {e}")
-
-    # 所有方法失败
     raise Exception(f"无法获取音频时长: {audio_path}")
 
 
-def create_segment_video(
-    img_a, img_b, duration, fps, blend_n, output_path, is_first=False
-):
-    """
-    使用FFmpeg直接创建单个片段视频（包含混合效果）
-    关键：使用FFmpeg的blend滤镜直接处理图片混合
-    """
+def get_image_size(image_path):
+    """获取图片尺寸"""
     try:
-        if is_first:
-            # 第一个片段：只显示第一张图片
-            cmd = [
-                'ffmpeg',
-                '-y',
-                '-loop',
-                '1',
-                '-i',
-                img_a,
-                '-t',
-                str(duration),
-                '-vf',
-                f'fps={fps},format=yuv420p',
-                '-c:v',
-                'libx264',
-                '-preset',
-                'ultrafast',
-                '-crf',
-                '23',
-                output_path,
-            ]
-        else:
-            # 后续片段：从img_a过渡到img_b
-            total_frames = int(duration * fps)
-            blend_frames = min(blend_n, total_frames)
-            still_frames = total_frames - blend_frames
-
-            if blend_frames <= 0:
-                # 没有混合帧，直接显示img_b
-                cmd = [
-                    'ffmpeg',
-                    '-y',
-                    '-loop',
-                    '1',
-                    '-i',
-                    img_b,
-                    '-t',
-                    str(duration),
-                    '-vf',
-                    f'fps={fps},format=yuv420p',
-                    '-c:v',
-                    'libx264',
-                    '-preset',
-                    'ultrafast',
-                    '-crf',
-                    '23',
-                    output_path,
-                ]
-            else:
-                # 使用FFmpeg blend滤镜创建混合效果
-                blend_duration = blend_frames / fps
-                still_duration = still_frames / fps
-
-                # 创建混合部分
-                temp_blend = output_path.replace('.mp4', '_blend.mp4')
-
-                # blend滤镜：从img_a淡入到img_b
-                blend_cmd = [
-                    'ffmpeg',
-                    '-y',
-                    '-loop',
-                    '1',
-                    '-t',
-                    str(blend_duration),
-                    '-i',
-                    img_a,
-                    '-loop',
-                    '1',
-                    '-t',
-                    str(blend_duration),
-                    '-i',
-                    img_b,
-                    '-filter_complex',
-                    f'[0:v][1:v]blend=all_expr=\'A*(1-T/{blend_duration})+B*T/{blend_duration}\':shortest=1,fps={fps},format=yuv420p',
-                    '-c:v',
-                    'libx264',
-                    '-preset',
-                    'ultrafast',
-                    '-crf',
-                    '23',
-                    temp_blend,
-                ]
-
-                result = subprocess.run(blend_cmd, capture_output=True, text=True)
-                if result.returncode != 0:
-                    raise Exception(f"混合视频生成失败: {result.stderr}")
-
-                if still_frames > 0:
-                    # 创建静止部分
-                    temp_still = output_path.replace('.mp4', '_still.mp4')
-                    still_cmd = [
-                        'ffmpeg',
-                        '-y',
-                        '-loop',
-                        '1',
-                        '-i',
-                        img_b,
-                        '-t',
-                        str(still_duration),
-                        '-vf',
-                        f'fps={fps},format=yuv420p',
-                        '-c:v',
-                        'libx264',
-                        '-preset',
-                        'ultrafast',
-                        '-crf',
-                        '23',
-                        temp_still,
-                    ]
-
-                    result = subprocess.run(still_cmd, capture_output=True, text=True)
-                    if result.returncode != 0:
-                        raise Exception(f"静止视频生成失败: {result.stderr}")
-
-                    # 合并混合部分和静止部分
-                    concat_file = output_path.replace('.mp4', '_concat.txt')
-                    with open(concat_file, 'w') as f:
-                        f.write(f"file '{os.path.basename(temp_blend)}'\n")
-                        f.write(f"file '{os.path.basename(temp_still)}'\n")
-
-                    concat_cmd = [
-                        'ffmpeg',
-                        '-y',
-                        '-f',
-                        'concat',
-                        '-safe',
-                        '0',
-                        '-i',
-                        concat_file,
-                        '-c',
-                        'copy',
-                        output_path,
-                    ]
-
-                    result = subprocess.run(
-                        concat_cmd,
-                        capture_output=True,
-                        text=True,
-                        cwd=os.path.dirname(output_path),
-                    )
-                    if result.returncode != 0:
-                        raise Exception(f"合并视频失败: {result.stderr}")
-
-                    # 清理临时文件
-                    try:
-                        os.remove(temp_blend)
-                        os.remove(temp_still)
-                        os.remove(concat_file)
-                    except:
-                        pass
-                else:
-                    # 只有混合部分
-                    shutil.move(temp_blend, output_path)
-
-                return
-
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            raise Exception(f"片段视频生成失败: {result.stderr}")
-
-    except Exception as e:
-        raise Exception(f"创建视频片段失败: {str(e)}")
+        cmd = [
+            'ffprobe',
+            '-v',
+            'error',
+            '-select_streams',
+            'v:0',
+            '-show_entries',
+            'stream=width,height',
+            '-of',
+            'csv=s=x:p=0',
+            image_path,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            width, height = result.stdout.strip().split('x')
+            return int(width), int(height)
+    except:
+        pass
+    return 1920, 1080
 
 
-def generate_video_ffmpeg_fast(
+def build_concat_demuxer_list(vis_seq, char_interval, lip_dir, temp_dir):
+    """
+    构建 FFmpeg concat demuxer 文件
+    每个口型作为一个片段，指定时长
+    """
+    concat_file = os.path.join(temp_dir, 'concat_list.txt')
+
+    with open(concat_file, 'w') as f:
+        for i, vis in enumerate(vis_seq):
+            img_path = os.path.join(lip_dir, f"{vis}.png")
+            if not os.path.exists(img_path):
+                raise FileNotFoundError(f"口型图片不存在: {img_path}")
+
+            # 写入图片路径和持续时间
+            f.write(f"file '{img_path}'\n")
+            f.write(f"duration {char_interval}\n")
+
+        # 最后一帧需要再写一次（concat demuxer 要求）
+        last_img = os.path.join(lip_dir, f"{vis_seq[-1]}.png")
+        f.write(f"file '{last_img}'\n")
+
+    return concat_file
+
+
+def generate_video_ffmpeg_ultra_fast(
     vis_seq, fps, char_interval, blend_n, lip_dir, audio_path, output_video, temp_dir
 ):
     """
-    极速版本：每个口型片段独立生成，然后合并
+    超快版本：使用 FFmpeg concat demuxer + 滤镜链一次性生成
     """
     try:
-        print(f"开始生成视频，共 {len(vis_seq)} 个口型片段...")
+        print(f"开始生成视频，共 {len(vis_seq)} 个口型...")
 
-        # 创建片段目录
-        segments_dir = os.path.join(temp_dir, 'segments')
-        os.makedirs(segments_dir, exist_ok=True)
+        # 获取图片尺寸
+        first_img = os.path.join(lip_dir, f"{vis_seq[0]}.png")
+        width, height = get_image_size(first_img)
+        print(f"视频尺寸: {width}x{height}")
 
-        segment_files = []
+        # 构建 concat 文件
+        concat_file = build_concat_demuxer_list(
+            vis_seq, char_interval, lip_dir, temp_dir
+        )
 
-        # 并行生成每个片段（逐个处理，避免内存问题）
-        for i, vis in enumerate(vis_seq):
-            print(f"处理片段 {i+1}/{len(vis_seq)}: {vis}")
+        audio_file = audio_path[0] if isinstance(audio_path, tuple) else audio_path
+        audio_duration = get_audio_duration(audio_file)
+        video_duration = len(vis_seq) * char_interval
 
-            img_current = os.path.join(lip_dir, f"{vis}.png")
-            if not os.path.exists(img_current):
-                raise FileNotFoundError(f"口型图片不存在: {img_current}")
+        print("使用FFmpeg一次性生成视频（绿幕背景）...")
 
-            segment_output = os.path.join(segments_dir, f"segment_{i:04d}.mp4")
+        # 使用 FFmpeg 的 concat demuxer + overlay 滤镜一次性处理
+        # 关键优化：
+        # 1. -vsync cfr 强制恒定帧率
+        # 2. -r 设置输出帧率
+        # 3. minterpolate 滤镜做帧混合（替代手动blend）
+        # 4. 直接叠加到绿幕上
 
-            if i == 0:
-                # 第一个片段
-                create_segment_video(
-                    img_current,
-                    img_current,
-                    char_interval,
-                    fps,
-                    blend_n,
-                    segment_output,
-                    is_first=True,
-                )
-            else:
-                # 后续片段
-                img_prev = os.path.join(lip_dir, f"{vis_seq[i-1]}.png")
-                create_segment_video(
-                    img_prev,
-                    img_current,
-                    char_interval,
-                    fps,
-                    blend_n,
-                    segment_output,
-                    is_first=False,
-                )
-
-            segment_files.append(segment_output)
-
-        # 合并所有片段
-        print("合并所有视频片段...")
-        concat_list = os.path.join(temp_dir, 'segments_concat.txt')
-        with open(concat_list, 'w') as f:
-            for seg_file in segment_files:
-                f.write(f"file '{seg_file}'\n")
-
-        temp_video = os.path.join(temp_dir, 'video_no_audio.mp4')
-        concat_cmd = [
+        video_cmd = [
             'ffmpeg',
             '-y',
+            # 输入：绿幕背景
+            '-f',
+            'lavfi',
+            '-i',
+            f'color=c=green:s={width}x{height}:r={fps}',
+            # 输入：图片序列（concat demuxer）
             '-f',
             'concat',
             '-safe',
             '0',
             '-i',
-            concat_list,
-            '-c',
-            'copy',
-            temp_video,
+            concat_file,
+            # 滤镜链
+            '-filter_complex',
+            f'[1:v]fps={fps},minterpolate=fps={fps}:mi_mode=blend[smooth];'
+            f'[0:v][smooth]overlay=0:0:shortest=1[v]',
+            '-map',
+            '[v]',
+            # 设置时长
+            '-t',
+            str(max(audio_duration, video_duration)),
+            # 编码参数
+            '-c:v',
+            'libx264',
+            '-preset',
+            'veryfast',  # veryfast 比 ultrafast 质量好且速度可接受
+            '-tune',
+            'fastdecode',  # 优化解码速度
+            '-crf',
+            '23',
+            '-pix_fmt',
+            'yuv420p',
+            '-movflags',
+            '+faststart',
+            # 线程优化
+            '-threads',
+            '0',  # 自动使用所有CPU核心
+            # 输出
+            os.path.join(temp_dir, 'video_no_audio.mp4'),
         ]
 
-        result = subprocess.run(concat_cmd, capture_output=True, text=True)
+        print("正在编码视频...")
+        result = subprocess.run(video_cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            raise Exception(f"合并视频失败: {result.stderr}")
-
-        audio_file = audio_path[0] if isinstance(audio_path, tuple) else audio_path
-        audio_duration = get_audio_duration(audio_file)
-
-        try:
-            video_duration = get_audio_duration(temp_video)
-        except:
-            video_duration = len(vis_seq) * char_interval
-
-        # 如果音频更长，延长视频
-        final_video = temp_video
-        if audio_duration > video_duration + 0.1:  # 留一点容差
-            print(
-                f"延长视频以匹配音频 ({video_duration:.2f}s -> {audio_duration:.2f}s)..."
-            )
-
-            last_img = os.path.join(lip_dir, f"{vis_seq[-1]}.png")
-            extra_duration = audio_duration - video_duration
-
-            temp_extra = os.path.join(temp_dir, 'extra.mp4')
-            extra_cmd = [
-                'ffmpeg',
-                '-y',
-                '-loop',
-                '1',
-                '-i',
-                last_img,
-                '-t',
-                str(extra_duration),
-                '-vf',
-                f'fps={fps},format=yuv420p',
-                '-c:v',
-                'libx264',
-                '-preset',
-                'ultrafast',
-                '-crf',
-                '23',
-                temp_extra,
-            ]
-
-            subprocess.run(extra_cmd, capture_output=True, check=True)
-
-            # 合并原视频和延长部分
-            concat_final_list = os.path.join(temp_dir, 'final_concat.txt')
-            with open(concat_final_list, 'w') as f:
-                f.write(f"file '{temp_video}'\n")
-                f.write(f"file '{temp_extra}'\n")
-
-            temp_video_extended = os.path.join(temp_dir, 'video_extended.mp4')
-            concat_final_cmd = [
-                'ffmpeg',
-                '-y',
-                '-f',
-                'concat',
-                '-safe',
-                '0',
-                '-i',
-                concat_final_list,
-                '-c',
-                'copy',
-                temp_video_extended,
-            ]
-
-            subprocess.run(concat_final_cmd, capture_output=True, check=True)
-            final_video = temp_video_extended
+            raise Exception(f"视频生成失败: {result.stderr}")
 
         # 合并音频
         print("合并音视频...")
+        temp_video = os.path.join(temp_dir, 'video_no_audio.mp4')
+
         merge_cmd = [
             'ffmpeg',
             '-y',
             '-i',
-            final_video,
+            temp_video,
             '-i',
             audio_file,
             '-c:v',
-            'copy',
+            'copy',  # 不重新编码视频
             '-c:a',
             'aac',
             '-b:a',
@@ -541,7 +324,7 @@ def generate_video_ffmpeg_fast(
         if result.returncode != 0:
             raise Exception(f"音视频合并失败: {result.stderr}")
 
-        print(f"视频生成成功: {output_video}")
+        print(f"✅ 视频生成成功: {output_video}")
         return output_video
 
     except Exception as e:
@@ -557,21 +340,17 @@ def generate_video(
     if not lip_dir.exists():
         raise FileNotFoundError(f"口型图片目录不存在: {lip_dir}")
 
-    # 生成口型序列
     vis_seq = build_vis_seq(text)
     print('口型序列 ->', vis_seq)
 
-    # 创建临时目录
     temp_dir = tempfile.mkdtemp(prefix='lipsync_')
     print(f"临时目录: {temp_dir}")
 
     try:
-        # 加载音频
         print("处理音频...")
         audio_path = _load_audio_robust(audio_file, temp_dir)
 
-        # 生成视频
-        generate_video_ffmpeg_fast(
+        generate_video_ffmpeg_ultra_fast(
             vis_seq,
             fps,
             char_interval,
@@ -603,13 +382,12 @@ def generate_video(
         gc.collect()
 
 
-# 生成接口
 @router.post(
     "/generate-video",
     summary="生成口型视频",
     operation_id="generate_lip_sync_video",
     description="""
-    生成口型同步视频。
+    生成口型同步视频（绿幕背景，极速生成）。
     
     该接口根据提供的文本内容和音频文件生成口型同步的视频。
     
@@ -619,7 +397,7 @@ def generate_video(
     - gender: 说话者性别 (1 为男性, 0 为女性)
     - char_interval: 每个字符的持续时间（秒）
     
-    返回生成的视频URL。
+    返回生成的视频URL（MP4格式，绿幕背景 #00FF00）。
     """,
 )
 def api_generate(req: GenerateVideoRequest, request: Request):
