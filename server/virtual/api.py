@@ -16,7 +16,7 @@ router = APIRouter(prefix="/virtual", tags=["virtual"])
 VIRTUAL_VIDEOS_DIR = Path("uploads") / "aividfromppt" / "videos"
 VIRTUAL_VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
 
-# ----------  口型表 ----------
+# ---------- Viseme Mapping Table ----------
 VIS_MAP = {
     'b': '00',
     'p': '00',
@@ -93,12 +93,12 @@ def build_vis_seq(sentence):
 
 
 def _load_audio_robust(audio_file_path_or_url, temp_dir):
-    """加载音频文件"""
+    """Load audio file from local path or URL"""
     if os.path.isfile(audio_file_path_or_url):
         return audio_file_path_or_url, False
 
     if audio_file_path_or_url.startswith(("http://", "https://")):
-        print(f"正在下载音频: {audio_file_path_or_url}")
+        print(f"Downloading audio: {audio_file_path_or_url}")
         try:
             response = requests.get(audio_file_path_or_url, stream=True, timeout=30)
             response.raise_for_status()
@@ -113,16 +113,16 @@ def _load_audio_robust(audio_file_path_or_url, temp_dir):
 
             return tmp_audio_path, True
         except requests.RequestException as e:
-            raise ConnectionError(f"下载音频失败: {e}")
+            raise ConnectionError(f"Failed to download audio: {e}")
 
     if os.path.exists(audio_file_path_or_url):
         return audio_file_path_or_url, False
     else:
-        raise FileNotFoundError(f"音频文件不存在: {audio_file_path_or_url}")
+        raise FileNotFoundError(f"Audio file not found: {audio_file_path_or_url}")
 
 
 def get_audio_duration(audio_path):
-    """获取音频时长（秒）"""
+    """Get audio duration in seconds"""
     import json
 
     if isinstance(audio_path, tuple):
@@ -131,7 +131,7 @@ def get_audio_duration(audio_path):
     audio_path = str(audio_path)
 
     if not os.path.exists(audio_path):
-        raise FileNotFoundError(f"音频文件不存在: {audio_path}")
+        raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
     try:
         cmd = [
@@ -165,13 +165,13 @@ def get_audio_duration(audio_path):
                             if duration > 0:
                                 return duration
     except Exception as e:
-        print(f"获取时长失败: {e}")
+        print(f"Failed to get duration: {e}")
 
-    raise Exception(f"无法获取音频时长: {audio_path}")
+    raise Exception(f"Unable to get audio duration: {audio_path}")
 
 
 def get_image_size(image_path):
-    """获取图片尺寸"""
+    """Get image dimensions"""
     try:
         cmd = [
             'ffprobe',
@@ -196,8 +196,8 @@ def get_image_size(image_path):
 
 def build_concat_demuxer_list(vis_seq, char_interval, lip_dir, temp_dir):
     """
-    构建 FFmpeg concat demuxer 文件
-    每个口型作为一个片段，指定时长
+    Build FFmpeg concat demuxer file
+    Each viseme as a segment with specified duration
     """
     concat_file = os.path.join(temp_dir, 'concat_list.txt')
 
@@ -205,13 +205,13 @@ def build_concat_demuxer_list(vis_seq, char_interval, lip_dir, temp_dir):
         for i, vis in enumerate(vis_seq):
             img_path = os.path.join(lip_dir, f"{vis}.png")
             if not os.path.exists(img_path):
-                raise FileNotFoundError(f"口型图片不存在: {img_path}")
+                raise FileNotFoundError(f"Viseme image not found: {img_path}")
 
-            # 写入图片路径和持续时间
+            # Write image path and duration
             f.write(f"file '{img_path}'\n")
             f.write(f"duration {char_interval}\n")
 
-        # 最后一帧需要再写一次（concat demuxer 要求）
+        # Last frame needs to be written again (concat demuxer requirement)
         last_img = os.path.join(lip_dir, f"{vis_seq[-1]}.png")
         f.write(f"file '{last_img}'\n")
 
@@ -222,17 +222,17 @@ def generate_video_ffmpeg_ultra_fast(
     vis_seq, fps, char_interval, blend_n, lip_dir, audio_path, output_video, temp_dir
 ):
     """
-    超快版本：使用 FFmpeg concat demuxer + 滤镜链一次性生成
+    Ultra-fast version: Generate video using FFmpeg concat demuxer + filter chain in one pass
     """
     try:
-        print(f"开始生成视频，共 {len(vis_seq)} 个口型...")
+        print(f"Starting video generation, {len(vis_seq)} visemes...")
 
-        # 获取图片尺寸
+        # Get image dimensions
         first_img = os.path.join(lip_dir, f"{vis_seq[0]}.png")
         width, height = get_image_size(first_img)
-        print(f"视频尺寸: {width}x{height}")
+        print(f"Video dimensions: {width}x{height}")
 
-        # 构建 concat 文件
+        # Build concat file
         concat_file = build_concat_demuxer_list(
             vis_seq, char_interval, lip_dir, temp_dir
         )
@@ -241,14 +241,14 @@ def generate_video_ffmpeg_ultra_fast(
         audio_duration = get_audio_duration(audio_file)
         video_duration = len(vis_seq) * char_interval
 
-        print("使用FFmpeg一次性生成视频（绿幕背景）...")
+        print("Generating video with FFmpeg in one pass (green screen background)...")
 
-        # 使用 FFmpeg 的 concat demuxer + overlay 滤镜一次性处理
-        # 关键优化：
-        # 1. -vsync cfr 强制恒定帧率
-        # 2. -r 设置输出帧率
-        # 3. minterpolate 滤镜做帧混合（替代手动blend）
-        # 4. 直接叠加到绿幕上
+        # Use FFmpeg concat demuxer + overlay filter to process in one pass
+        # Key optimizations:
+        # 1. -vsync cfr forces constant frame rate
+        # 2. -r sets output frame rate
+        # 3. minterpolate filter for frame blending (replaces manual blend)
+        # 4. Direct overlay on green screen
 
         video_cmd = [
             'ffmpeg',
@@ -258,49 +258,49 @@ def generate_video_ffmpeg_ultra_fast(
             'lavfi',
             '-i',
             f'color=c=green:s={width}x{height}:r={fps}',
-            # 输入：图片序列（concat demuxer）
+            # Input: image sequence (concat demuxer)
             '-f',
             'concat',
             '-safe',
             '0',
             '-i',
             concat_file,
-            # 滤镜链
+            # Filter chain
             '-filter_complex',
             f'[1:v]fps={fps},minterpolate=fps={fps}:mi_mode=blend[smooth];'
             f'[0:v][smooth]overlay=0:0:shortest=1[v]',
             '-map',
             '[v]',
-            # 设置时长
+            # Set duration
             '-t',
             str(max(audio_duration, video_duration)),
-            # 编码参数
+            # Encoding parameters
             '-c:v',
             'libx264',
             '-preset',
-            'veryfast',  # veryfast 比 ultrafast 质量好且速度可接受
+            'veryfast',  # veryfast has better quality than ultrafast with acceptable speed
             '-tune',
-            'fastdecode',  # 优化解码速度
+            'fastdecode',  # Optimize for decoding speed
             '-crf',
             '23',
             '-pix_fmt',
             'yuv420p',
             '-movflags',
             '+faststart',
-            # 线程优化
+            # Thread optimization
             '-threads',
-            '0',  # 自动使用所有CPU核心
-            # 输出
+            '0',  # Automatically use all CPU cores
+            # Output
             os.path.join(temp_dir, 'video_no_audio.mp4'),
         ]
 
-        print("正在编码视频...")
+        print("Encoding video...")
         result = subprocess.run(video_cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            raise Exception(f"视频生成失败: {result.stderr}")
+            raise Exception(f"Video generation failed: {result.stderr}")
 
-        # 合并音频
-        print("合并音视频...")
+        # Merge audio
+        print("Merging audio and video...")
         temp_video = os.path.join(temp_dir, 'video_no_audio.mp4')
 
         merge_cmd = [
@@ -311,7 +311,7 @@ def generate_video_ffmpeg_ultra_fast(
             '-i',
             audio_file,
             '-c:v',
-            'copy',  # 不重新编码视频
+            'copy',  # Don't re-encode video
             '-c:a',
             'aac',
             '-b:a',
@@ -322,13 +322,13 @@ def generate_video_ffmpeg_ultra_fast(
 
         result = subprocess.run(merge_cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            raise Exception(f"音视频合并失败: {result.stderr}")
+            raise Exception(f"Audio-video merge failed: {result.stderr}")
 
-        print(f"✅ 视频生成成功: {output_video}")
+        print(f"✅ Video generated successfully: {output_video}")
         return output_video
 
     except Exception as e:
-        raise Exception(f"视频生成失败: {str(e)}")
+        raise Exception(f"Video generation failed: {str(e)}")
 
 
 def generate_video(
@@ -338,16 +338,16 @@ def generate_video(
     lip_dir = Path(__file__).parent / 'mouse-sort' / gender_folder
 
     if not lip_dir.exists():
-        raise FileNotFoundError(f"口型图片目录不存在: {lip_dir}")
+        raise FileNotFoundError(f"Viseme image directory not found: {lip_dir}")
 
     vis_seq = build_vis_seq(text)
-    print('口型序列 ->', vis_seq)
+    print('Viseme sequence ->', vis_seq)
 
     temp_dir = tempfile.mkdtemp(prefix='lipsync_')
-    print(f"临时目录: {temp_dir}")
+    print(f"Temporary directory: {temp_dir}")
 
     try:
-        print("处理音频...")
+        print("Processing audio...")
         audio_path = _load_audio_robust(audio_file, temp_dir)
 
         generate_video_ffmpeg_ultra_fast(
@@ -369,49 +369,49 @@ def generate_video(
                 Path(output_video).unlink()
             except:
                 pass
-        raise Exception(f"视频生成失败: {str(e)}")
+        raise Exception(f"Video generation failed: {str(e)}")
 
     finally:
         try:
             if os.path.exists(temp_dir):
-                print(f"清理临时目录: {temp_dir}")
+                print(f"Cleaning up temporary directory: {temp_dir}")
                 shutil.rmtree(temp_dir)
         except Exception as e:
-            print(f"清理临时目录时出错: {e}")
+            print(f"Error cleaning up temporary directory: {e}")
 
         gc.collect()
 
 
 @router.post(
     "/generate-video",
-    summary="生成口型视频",
+    summary="Generate lip-sync video",
     operation_id="generate_lip_sync_video",
     description="""
-    生成口型同步视频（绿幕背景，极速生成）。
+    Generate lip-sync video (green screen background, ultra-fast generation).
     
-    该接口根据提供的文本内容和音频文件生成口型同步的视频。
+    This endpoint generates a lip-sync video based on the provided text content and audio file.
     
-    参数说明：
-    - text: 用于口型同步的文本内容
-    - audio_file: 音频文件地址
-    - gender: 说话者性别 (1 为男性, 0 为女性)
-    - char_interval: 每个字符的持续时间（秒）
+    Parameters:
+    - text: Text content for lip-sync
+    - audio_file: Audio file URL or path
+    - gender: Speaker gender (1 for male, 0 for female)
+    - char_interval: Duration per character in seconds
     
-    返回生成的视频URL（MP4格式，绿幕背景 #00FF00）。
+    Returns the generated video URL (MP4 format, green screen background #00FF00).
     """,
 )
 def api_generate(req: GenerateVideoRequest, request: Request):
     if not req.text:
-        raise HTTPException(status_code=400, detail="文本内容不能为空")
+        raise HTTPException(status_code=400, detail="Text content cannot be empty")
 
     if req.gender not in [0, 1]:
         raise HTTPException(
-            status_code=400, detail="性别参数无效，必须为 0（女性）或 1（男性）"
+            status_code=400, detail="Invalid gender parameter, must be 0 (female) or 1 (male)"
         )
 
     if req.char_interval <= 0 or req.char_interval > 2:
         raise HTTPException(
-            status_code=400, detail="字符间隔参数无效，必须在 0 到 2 秒之间"
+            status_code=400, detail="Invalid char_interval parameter, must be between 0 and 2 seconds"
         )
 
     subtitle_url = req.subtitle_url
@@ -441,14 +441,14 @@ def api_generate(req: GenerateVideoRequest, request: Request):
             audio_url=req.audio_file,
             subtitle_url=subtitle_url,
             img_url=img_url,
-            message="视频生成成功",
+            message="Video generated successfully",
         )
 
     except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=f"文件未找到: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")
     except PermissionError as e:
-        raise HTTPException(status_code=403, detail=f"权限不足: {str(e)}")
+        raise HTTPException(status_code=403, detail=f"Insufficient permissions: {str(e)}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"视频生成失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Video generation failed: {str(e)}")
     finally:
         gc.collect()

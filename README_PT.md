@@ -1,0 +1,201 @@
+# AIVidFromPPT
+
+Um serviço de geração de vídeo com IA baseado em FastAPI que suporta um fluxo de trabalho completo de PPT para vídeo, incluindo análise de PPT, conversão de texto em fala, síntese de vídeo e funcionalidade de humano virtual.
+
+## ✨ Funcionalidades
+
+- 📄 **Análise e Processamento de PPT** - Converter arquivos PPT/PPTX em imagens com gerenciamento de contexto
+- 🔊 **Conversão de Texto em Fala (TTS)** - Suporte para múltiplos provedores de TTS com geração automática de legendas
+- 📤 **Gerenciamento de Upload de Arquivos** - Fazer upload, baixar e gerenciar vários tipos de arquivos
+- 🎬 **Síntese de Vídeo** - Combinar imagens, áudio, legendas e vídeos de humano virtual em vídeos completos
+- 👤 **Síntese de Humano Virtual** - Gerar vídeos de humano virtual com sincronização labial baseada em texto
+
+## 🚀 Início Rápido
+
+### Requisitos
+
+- Python 3.11+
+- Docker (opcional, para implantação containerizada)
+
+### Configuração do Código Fonte
+
+1. **Clonar o repositório**
+
+```bash
+git clone <repository-url>
+cd hackathon-AIVidFromPPT
+```
+
+2. **Instalar dependências do sistema**
+
+O projeto requer as seguintes ferramentas do sistema. Instale-as de acordo com seu sistema operacional:
+
+#### macOS
+
+```bash
+# Instalar usando Homebrew
+brew install libreoffice poppler ffmpeg fontconfig
+```
+
+#### Linux (Ubuntu/Debian)
+
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+    libreoffice \
+    libreoffice-writer \
+    libreoffice-impress \
+    poppler-utils \
+    ffmpeg \
+    fontconfig
+```
+
+#### Windows
+
+- **LibreOffice**: Baixar e instalar do [site oficial](https://www.libreoffice.org/download/)
+- **Poppler**: Baixar do [GitHub](https://github.com/oschwartz10612/poppler-windows/releases), extrair e adicionar ao PATH
+- **FFmpeg**: Baixar do [site oficial](https://ffmpeg.org/download.html), extrair e adicionar ao PATH
+- **Fontconfig**: Geralmente incluído no sistema
+
+**Notas**:
+- `libreoffice` - Para converter arquivos PPT/PPTX em imagens
+- `poppler-utils` - Para processamento de PDF e extração de imagens
+- `ffmpeg` - Para processamento de vídeo e áudio
+- `fontconfig` - Para gerenciamento de fontes (suporte a fontes chinesas)
+
+3. **Criar ambiente virtual**
+
+```bash
+conda create -n aividfromppt python=3.11 -y
+conda activate aividfromppt
+```
+
+4. **Instalar dependências Python**
+
+```bash
+cd server
+pip install -r requirements.txt
+```
+
+5. **Configurar variáveis de ambiente**
+
+Criar um arquivo `.env` (ou copiar de `.env.example`):
+
+```bash
+OPENAI_API_KEY=your-openai-api-key-here
+```
+
+6. **Iniciar o serviço**
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8201 --reload
+```
+
+7. **Acessar documentação da API**
+
+Abra seu navegador e visite: http://localhost:8201/docs
+
+## 🐳 Implantação Docker
+
+### Usando variáveis de ambiente
+
+```bash
+docker run -d \
+  --name aividfromppt \
+  --restart=always \
+  -p 8201:8201 \
+  -e OPENAI_API_KEY="your-openai-api-key-here" \
+  -v $(pwd)/server/uploads:/app/uploads \
+  unhejing/aividfromppt:latest
+```
+
+## 📚 Documentação da API
+
+Todos os endpoints da API seguem convenções RESTful com caminho base `/api/v1`.
+
+### Análise e Processamento de PPT (`/api/v1/pptToImg`)
+
+- `POST /upload` - Fazer upload de arquivo PPT/PPTX e converter em imagens
+- `GET /image` - Obter imagens convertidas
+- `POST /context` - Adicionar dados de contexto
+- `PUT /context` - Atualizar dados de contexto
+- `DELETE /context` - Excluir dados de contexto
+- `GET /context/{uuid}` - Obter dados de contexto
+
+### Conversão de Texto em Fala (`/api/v1/tts`)
+
+- `POST /synthesize` - Síntese de texto em fala
+  - Suporta OpenAI TTS
+  - Gera automaticamente arquivos de legenda SRT
+  - Retorna URL do arquivo de áudio e metadados
+- `GET /files/{file_path}` - Obter arquivos de áudio ou legenda
+- `GET /channels` - Obter lista de canais TTS suportados
+
+### Upload de Arquivos (`/api/v1/upload`)
+
+- `POST /file` - Fazer upload de um único arquivo (máx. 50MB)
+- `POST /files` - Fazer upload de múltiplos arquivos
+- `GET /files/{file_path}` - Obter arquivo enviado
+- `DELETE /file/{file_path}` - Excluir arquivo
+- `GET /list` - Listar todos os arquivos enviados
+
+Tipos de arquivo suportados: imagens, documentos, vídeos, áudio, legendas, arquivos compactados, etc.
+
+### Síntese de Vídeo (`/api/v1/video`)
+
+- `POST /synthesize` - Sintetizar vídeo
+  - Suporta síntese de vídeo multi-segmento
+  - Suporta sobreposição de imagens, áudio, legendas e vídeos de humano virtual
+  - Retorna ID do vídeo e URL de acesso
+- `GET /{video_id}` - Obter informações do vídeo
+- `GET /{video_id}/download` - Baixar arquivo de vídeo
+- `GET /health` - Verificação de saúde
+
+### Humano Virtual (`/api/v1/virtual`)
+
+- `POST /generate-video` - Gerar vídeo de humano virtual
+  - Gerar vídeo com sincronização labial baseado em texto
+  - Suporta conteúdo misto em chinês e inglês
+  - Suporta seleção de gênero
+
+## 🛠️ Stack Tecnológico
+
+- **Framework Web**: FastAPI
+- **Versão Python**: 3.11
+- **Principais Dependências**:
+  - OpenAI API (TTS)
+  - MoviePy (Processamento de vídeo)
+  - PyMuPDF (Processamento de PDF)
+  - LibreOffice (Conversão de PPT)
+  - FFmpeg (Processamento de vídeo/áudio)
+
+## 📁 Estrutura do Projeto
+
+```
+hackathon-AIVidFromPPT/
+├── server/                 # Serviço backend
+│   ├── pptToImg/          # Análise e processamento de PPT
+│   ├── tts/               # Conversão de texto em fala
+│   ├── upload/            # Gerenciamento de upload de arquivos
+│   ├── video/             # Síntese de vídeo
+│   ├── virtual/           # Síntese de humano virtual
+│   ├── main.py            # Ponto de entrada da aplicação
+│   └── requirements.txt   # Dependências Python
+├── .setup/                # Configuração de implantação
+│   ├── Dockerfile         # Build da imagem Docker
+│   └── build_and_push_dockerhub.sh  # Script de build da imagem
+├── docs/                  # Documentação do projeto
+└── README.md              # Descrição do projeto
+```
+
+## 📝 Variáveis de Ambiente
+
+| Variável | Obrigatório | Descrição | Padrão |
+|----------|-------------|-----------|--------|
+| `OPENAI_API_KEY` | ✅ | Chave da API OpenAI | Nenhum |
+
+## 🔗 Links Relacionados
+
+- Documentação da API: http://localhost:8201/docs
+- Documentação Interativa da API: http://localhost:8201/redoc
+

@@ -1,83 +1,105 @@
 # AIVidFromPPT
 
-## 项目概述
+An AI video generation service based on FastAPI that supports a complete workflow from PPT to video, including PPT parsing, text-to-speech, video synthesis, and virtual human functionality.
 
-本项目是一个多服务代码仓库，用于存放 AIVidFromPPT 相关的所有服务代码。
+## ✨ Features
 
-## 项目结构
+- 📄 **PPT Parsing & Processing** - Convert PPT/PPTX files to images with context management
+- 🔊 **Text-to-Speech (TTS)** - Support for multiple TTS providers with automatic subtitle generation
+- 📤 **File Upload Management** - Upload, download, and manage various file types
+- 🎬 **Video Synthesis** - Combine images, audio, subtitles, and virtual human videos into complete videos
+- 👤 **Virtual Human Synthesis** - Generate virtual human videos with lip-sync based on text
 
+## 🚀 Quick Start
+
+### Requirements
+
+- Python 3.11+
+- Docker (optional, for containerized deployment)
+
+### Source Code Setup
+
+1. **Clone the repository**
+
+```bash
+git clone <repository-url>
+cd hackathon-AIVidFromPPT
 ```
-hackathon-AIVidFromPPT/
-├── server/          # 后端服务
-└── docs/           # 项目文档
+
+2. **Install system dependencies**
+
+The project requires the following system tools. Install them according to your operating system:
+
+#### macOS
+
+```bash
+# Install using Homebrew
+brew install libreoffice poppler ffmpeg fontconfig
 ```
 
-## 当前服务
+#### Linux (Ubuntu/Debian)
 
-### server - 后端服务
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+    libreoffice \
+    libreoffice-writer \
+    libreoffice-impress \
+    poppler-utils \
+    ffmpeg \
+    fontconfig
+```
 
-FastAPI 后端服务，提供文件上传和 TTS（文本转语音）功能。
+#### Windows
 
-- **技术栈**: Python 3.11, FastAPI, Uvicorn, OpenAI
-- **端口**: 8201
-- **主要功能**:
-  - 📁 文件上传/下载/管理
-  - 🔊 多渠道 TTS 服务（支持 OpenAI）
-- **文档**: 详见 [server/README.md](./server/README.md)
+- **LibreOffice**: Download and install from [official website](https://www.libreoffice.org/download/)
+- **Poppler**: Download from [GitHub](https://github.com/oschwartz10612/poppler-windows/releases), extract and add to PATH
+- **FFmpeg**: Download from [official website](https://ffmpeg.org/download.html), extract and add to PATH
+- **Fontconfig**: Usually included in the system
 
-## 快速启动
+**Notes**:
+- `libreoffice` - For converting PPT/PPTX files to images
+- `poppler-utils` - For PDF processing and image extraction
+- `ffmpeg` - For video and audio processing
+- `fontconfig` - For font management (Chinese font support)
 
-### 1. 创建虚拟环境
+3. **Create virtual environment**
 
 ```bash
 conda create -n aividfromppt python=3.11 -y
+conda activate aividfromppt
 ```
 
-### 2. 安装依赖并启动
+4. **Install Python dependencies**
 
 ```bash
-cd /Users/rockyj/projects/ciandt/hackathon-AIVidFromPPT/server && conda activate aividfromppt && pip install -r requirements.txt
+cd server
+pip install -r requirements.txt
 ```
 
-### 3. 配置环境变量
+5. **Configure environment variables**
+
+Create a `.env` file (or copy from `.env.example`):
 
 ```bash
-export OPENAI_API_KEY="your-openai-api-key-here"
+OPENAI_API_KEY=your-openai-api-key-here
 ```
 
-### 4. 启动服务
+6. **Start the service**
 
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8201 --reload
 ```
 
-访问：http://localhost:8201/docs
+7. **Access API documentation**
 
-## Docker 部署
+Open your browser and visit: http://localhost:8201/docs
 
-### 1. 拉取镜像
+## 🐳 Docker Deployment
 
-```bash
-docker pull unhejing/aividfromppt:latest
-```
-
-### 2. 移除旧容器（如果存在）
-
-如果之前已经运行过容器，需要先停止并移除：
+### Using environment variables
 
 ```bash
-# 停止并删除旧容器
-docker stop aividfromppt 2>/dev/null || true
-docker rm aividfromppt 2>/dev/null || true
-```
-
-### 3. 运行容器
-
-```bash
-# 先拉取最新镜像
-docker pull unhejing/aividfromppt:latest
-
-# 运行容器
 docker run -d \
   --name aividfromppt \
   --restart=always \
@@ -87,106 +109,93 @@ docker run -d \
   unhejing/aividfromppt:latest
 ```
 
-或者使用 `--pull always` 参数（Docker 20.10+ 支持）：
+## 📚 API Documentation
 
-```bash
-docker run -d \
-  --name aividfromppt \
-  --restart=always \
-  --pull always \
-  -p 8201:8201 \
-  -e OPENAI_API_KEY="your-openai-api-key-here" \
-  -v $(pwd)/server/uploads:/app/uploads \
-  unhejing/aividfromppt:latest
+All API endpoints follow RESTful conventions with base path `/api/v1`.
+
+### PPT Parsing & Processing (`/api/v1/pptToImg`)
+
+- `POST /upload` - Upload PPT/PPTX file and convert to images
+- `GET /image` - Get converted images
+- `POST /context` - Add context data
+- `PUT /context` - Update context data
+- `DELETE /context` - Delete context data
+- `GET /context/{uuid}` - Get context data
+
+### Text-to-Speech (`/api/v1/tts`)
+
+- `POST /synthesize` - Text-to-speech synthesis
+  - Supports OpenAI TTS
+  - Automatically generates SRT subtitle files
+  - Returns audio file URL and metadata
+- `GET /files/{file_path}` - Get audio or subtitle files
+- `GET /channels` - Get list of supported TTS channels
+
+### File Upload (`/api/v1/upload`)
+
+- `POST /file` - Upload a single file (max 50MB)
+- `POST /files` - Upload multiple files
+- `GET /files/{file_path}` - Get uploaded file
+- `DELETE /file/{file_path}` - Delete file
+- `GET /list` - List all uploaded files
+
+Supported file types: images, documents, videos, audio, subtitles, archives, etc.
+
+### Video Synthesis (`/api/v1/video`)
+
+- `POST /synthesize` - Synthesize video
+  - Supports multi-segment video synthesis
+  - Supports overlaying images, audio, subtitles, and virtual human videos
+  - Returns video ID and access URL
+- `GET /{video_id}` - Get video information
+- `GET /{video_id}/download` - Download video file
+- `GET /health` - Health check
+
+### Virtual Human (`/api/v1/virtual`)
+
+- `POST /generate-video` - Generate virtual human video
+  - Generate lip-sync video based on text
+  - Supports Chinese and English mixed content
+  - Supports gender selection
+
+## 🛠️ Tech Stack
+
+- **Web Framework**: FastAPI
+- **Python Version**: 3.11
+- **Main Dependencies**:
+  - OpenAI API (TTS)
+  - MoviePy (Video processing)
+  - PyMuPDF (PDF processing)
+  - LibreOffice (PPT conversion)
+  - FFmpeg (Video/audio processing)
+
+## 📁 Project Structure
+
+```
+hackathon-AIVidFromPPT/
+├── server/                 # Backend service
+│   ├── pptToImg/          # PPT parsing and processing
+│   ├── tts/               # Text-to-speech
+│   ├── upload/            # File upload management
+│   ├── video/             # Video synthesis
+│   ├── virtual/           # Virtual human synthesis
+│   ├── main.py            # Application entry point
+│   └── requirements.txt   # Python dependencies
+├── .setup/                # Deployment configuration
+│   ├── Dockerfile         # Docker image build
+│   └── build_and_push_dockerhub.sh  # Image build script
+├── docs/                  # Project documentation
+└── README.md              # Project description
 ```
 
-**参数说明**：
-- `-d`: 后台运行容器
-- `--name aividfromppt`: 容器名称
-- `--restart=always`: 容器自动重启策略（always 表示总是重启）
-- `-p 8201:8201`: 端口映射（宿主机端口:容器端口）
-- `-e OPENAI_API_KEY`: 设置 OpenAI API Key 环境变量
-- `-v $(pwd)/server/uploads:/app/uploads`: 挂载数据卷，持久化上传文件
+## 📝 Environment Variables
 
-### 4. 使用环境变量文件
+| Variable | Required | Description | Default |
+|----------|----------|-------------|---------|
+| `OPENAI_API_KEY` | ✅ | OpenAI API key | None |
 
-也可以使用 `.env` 文件（同样需要先移除旧容器）：
+## 🔗 Related Links
 
-```bash
-# 移除旧容器
-docker stop aividfromppt 2>/dev/null || true
-docker rm aividfromppt 2>/dev/null || true
-
-# 运行新容器
-docker run -d \
-  --name aividfromppt \
-  --restart=always \
-  -p 8201:8201 \
-  --env-file .env \
-  -v $(pwd)/server/uploads:/app/uploads \
-  unhejing/aividfromppt:latest
-```
-
-### 5. 一键部署脚本
-
-也可以使用以下命令一键完成（拉取最新镜像、移除旧容器、运行新容器）：
-
-```bash
-docker pull unhejing/aividfromppt:latest && \
-docker stop aividfromppt 2>/dev/null || true && \
-docker rm aividfromppt 2>/dev/null || true && \
-docker run -d \
-  --name aividfromppt \
-  --restart=always \
-  -p 8201:8201 \
-  -e OPENAI_API_KEY="your-openai-api-key-here" \
-  -v $(pwd)/server/uploads:/app/uploads \
-  unhejing/aividfromppt:latest
-```
-
-或者使用 `--pull always` 参数（自动拉取最新镜像）：
-
-```bash
-docker stop aividfromppt 2>/dev/null || true && \
-docker rm aividfromppt 2>/dev/null || true && \
-docker run -d \
-  --name aividfromppt \
-  --restart=always \
-  --pull always \
-  -p 8201:8201 \
-  -e OPENAI_API_KEY="your-openai-api-key-here" \
-  -v $(pwd)/server/uploads:/app/uploads \
-  unhejing/aividfromppt:latest
-```
-
-### 6. 查看容器状态
-
-```bash
-# 查看运行中的容器
-docker ps
-
-# 查看容器日志
-docker logs -f aividfromppt
-
-# 停止容器
-docker stop aividfromppt
-
-# 启动容器
-docker start aividfromppt
-
-# 删除容器
-docker rm aividfromppt
-```
-
-访问：http://localhost:8201/docs
-
-**详细部署指南**: 查看 [docs/deployment-guide.md](./docs/deployment-guide.md)
-
-## 新增服务
-
-如需添加其他服务（如前端、AI处理服务等），请在项目根目录创建相应的服务目录，并遵循以下规范：
-
-1. 每个服务目录应包含独立的 `README.md` 说明文档
-2. 每个服务应有自己的依赖管理文件（如 `requirements.txt`、`package.json` 等）
-3. 在本文档中更新服务列表
+- API Documentation: http://localhost:8201/docs
+- Interactive API Documentation: http://localhost:8201/redoc
 

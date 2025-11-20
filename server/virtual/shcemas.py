@@ -21,7 +21,7 @@ class GenerateVideoRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "text": "你好，这是一个口型同步测试",
+                "text": "Hello, this is a lip-sync test",
                 "audio_file": "http://xxx.com/file.mp3",
                 "gender": 1,
                 "char_interval": 0.5,
@@ -52,7 +52,7 @@ class GenerateVideoResponse(BaseModel):
                 "img_url": '',
                 "audio_url": '',
                 "video_url": "https://example.com/api/v1/vitual/videos/a1b2c3d4e5f6g7h8i9j0.mp4",
-                "message": "视频生成成功",
+                "message": "Video generated successfully",
             }
         }
 
@@ -65,5 +65,5 @@ class HealthResponse(BaseModel):
 
     class Config:
         json_schema_extra = {
-            "example": {"status": "ok", "message": "口型视频生成服务运行正常"}
+            "example": {"status": "ok", "message": "Lip-sync video generation service is running normally"}
         }
