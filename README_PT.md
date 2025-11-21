@@ -219,26 +219,23 @@ Exemplo de configuração:
 
 A seguir estão exemplos de resultados de vídeo gerados chamando este serviço através da plataforma Maker:
 
+> **Nota**: O README do GitHub não suporta reprodução direta de vídeo. Por favor, clique nos links abaixo para baixar e visualizar os vídeos, ou use um visualizador de Markdown que suporte reprodução de vídeo.
+
+### Arquivo Original
+
+📄 [Baixar Arquivo PPT Original](./resource/test.pptx) - Este é o arquivo fonte usado para gerar os vídeos
+
 ### Demonstração em Chinês
 
-<video width="800" controls>
-  <source src="./resource/cn_video_res.mp4" type="video/mp4">
-  Seu navegador não suporta reprodução de vídeo. Por favor, baixe o vídeo: <a href="./resource/cn_video_res.mp4">cn_video_res.mp4</a>
-</video>
+📹 [Baixar Vídeo de Demonstração em Chinês](./resource/cn_video_res.mp4)
 
 ### Demonstração em Inglês
 
-<video width="800" controls>
-  <source src="./resource/en_video_res.mp4" type="video/mp4">
-  Seu navegador não suporta reprodução de vídeo. Por favor, baixe o vídeo: <a href="./resource/en_video_res.mp4">en_video_res.mp4</a>
-</video>
+📹 [Baixar Vídeo de Demonstração em Inglês](./resource/en_video_res.mp4)
 
 ### Demonstração em Português
 
-<video width="800" controls>
-  <source src="./resource/pt_video_res.mp4" type="video/mp4">
-  Seu navegador não suporta reprodução de vídeo. Por favor, baixe o vídeo: <a href="./resource/pt_video_res.mp4">pt_video_res.mp4</a>
-</video>
+📹 [Baixar Vídeo de Demonstração em Português](./resource/pt_video_res.mp4)
 
 ## 🔗 Links Relacionados
 

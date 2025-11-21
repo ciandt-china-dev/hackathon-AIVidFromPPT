@@ -219,26 +219,23 @@ hackathon-AIVidFromPPT/
 
 以下是使用 Maker 平台调用本服务生成的视频结果示例：
 
+> **注意**：GitHub README 不支持直接播放视频。请点击下方链接下载视频后查看，或使用支持视频播放的 Markdown 查看器。
+
+### 原始文件
+
+📄 [下载原始 PPT 文件](./resource/test.pptx) - 这是生成视频的源文件
+
 ### 中文示例
 
-<video width="800" controls>
-  <source src="./resource/cn_video_res.mp4" type="video/mp4">
-  您的浏览器不支持视频播放。请下载视频：<a href="./resource/cn_video_res.mp4">cn_video_res.mp4</a>
-</video>
+📹 [下载中文演示视频](./resource/cn_video_res.mp4)
 
 ### 英文示例
 
-<video width="800" controls>
-  <source src="./resource/en_video_res.mp4" type="video/mp4">
-  您的浏览器不支持视频播放。请下载视频：<a href="./resource/en_video_res.mp4">en_video_res.mp4</a>
-</video>
+📹 [下载英文演示视频](./resource/en_video_res.mp4)
 
 ### 葡萄牙语示例
 
-<video width="800" controls>
-  <source src="./resource/pt_video_res.mp4" type="video/mp4">
-  您的浏览器不支持视频播放。请下载视频：<a href="./resource/pt_video_res.mp4">pt_video_res.mp4</a>
-</video>
+📹 [下载葡萄牙语演示视频](./resource/pt_video_res.mp4)
 
 ## 🔗 相关链接
 
