@@ -99,6 +99,19 @@ Open your browser and visit: http://localhost:8201/docs
 
 ## 🐳 Docker Deployment
 
+### Server Configuration Recommendations
+
+To ensure stable service operation, it is recommended to use a cloud server with the following configuration:
+
+- **Recommended Configuration**: 8 CPU cores + 16GB RAM
+- **Minimum Configuration**: 4 CPU cores + 8GB RAM
+- **Storage**: At least 50GB available space (for storing uploaded files and generated videos)
+
+**Notes**:
+- Video synthesis and virtual human generation are compute-intensive tasks that require sufficient CPU and memory resources
+- Larger memory helps process large PPT files and video files
+- Sufficient storage space is needed to save user-uploaded files and generated videos
+
 ### Using environment variables
 
 ```bash

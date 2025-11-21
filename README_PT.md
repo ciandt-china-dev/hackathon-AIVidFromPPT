@@ -99,6 +99,19 @@ Abra seu navegador e visite: http://localhost:8201/docs
 
 ## 🐳 Implantação Docker
 
+### Recomendações de Configuração do Servidor
+
+Para garantir a operação estável do serviço, recomenda-se usar um servidor em nuvem com a seguinte configuração:
+
+- **Configuração Recomendada**: 8 núcleos de CPU + 16GB de RAM
+- **Configuração Mínima**: 4 núcleos de CPU + 8GB de RAM
+- **Armazenamento**: Pelo menos 50GB de espaço disponível (para armazenar arquivos enviados e vídeos gerados)
+
+**Notas**:
+- A síntese de vídeo e a geração de humano virtual são tarefas intensivas em computação que requerem recursos suficientes de CPU e memória
+- Mais memória ajuda a processar arquivos PPT e vídeo grandes
+- Espaço de armazenamento suficiente é necessário para salvar arquivos enviados pelos usuários e vídeos gerados
+
 ### Usando variáveis de ambiente
 
 ```bash
