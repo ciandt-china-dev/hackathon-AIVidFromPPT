@@ -137,6 +137,8 @@ Se você não tiver um ambiente de implantação local, pode usar diretamente no
 - Ao configurar HOST ENDPOINT na plataforma Maker, use `http://154.40.41.212:8201` como endereço do serviço
 - Não é necessário instalar dependências ou configurar o ambiente, pronto para uso imediato
 
+> ⚠️ **Aviso Importante**: Devido às limitações de recursos do servidor, ao usar o serviço online para testes no Maker, certifique-se de que os arquivos PPT enviados não excedam 5 páginas para garantir a operação estável do serviço.
+
 ## 📚 Documentação da API
 
 Todos os endpoints da API seguem convenções RESTful com caminho base `/api/v1`.
@@ -240,6 +242,22 @@ Exemplo de configuração:
 - Inserir o endereço de rede pública no campo Template, por exemplo: `http://154.40.41.212:8201`
 - Garantir que o serviço está corretamente implantado e acessível da rede pública
 - Após a configuração, você pode chamar todas as interfaces de API deste serviço nos fluxos de trabalho do Maker
+
+### Fluxo de Trabalho do Maker
+
+Fornecemos um arquivo de configuração completo do fluxo de trabalho do Maker que você pode importar e usar diretamente:
+
+📄 [Baixar Arquivo Fonte do Fluxo de Trabalho do Maker](./maker/AIVidFromPPT.json) - Contém a configuração completa do fluxo de trabalho
+
+![Captura de Tela do Fluxo de Trabalho do Maker](./maker/AIVidFromPPT.png)
+
+**Instruções de Uso**:
+1. Baixar o arquivo fonte do fluxo de trabalho `AIVidFromPPT.json`
+2. Importar o fluxo de trabalho na plataforma Maker
+3. Modificar o endereço do serviço na configuração HOST ENDPOINT de acordo com sua situação real
+4. Executar o fluxo de trabalho para começar a usar
+
+> ⚠️ **Aviso Importante**: Devido às limitações de recursos do servidor, ao testar com o serviço online, certifique-se de que os arquivos PPT enviados não excedam 5 páginas.
 
 ## 🎬 Vídeos de Demonstração
 

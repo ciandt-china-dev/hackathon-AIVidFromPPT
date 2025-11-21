@@ -137,6 +137,8 @@ If you don't have a local deployment environment, you can directly use our onlin
 - When configuring HOST ENDPOINT in the Maker platform, use `http://154.40.41.212:8201` as the service address
 - No need to install any dependencies or configure the environment, ready to use out of the box
 
+> ⚠️ **Important Notice**: Due to server resource limitations, when using the online service for Maker testing, please ensure that uploaded PPT files do not exceed 5 pages to ensure stable service operation.
+
 ## 📚 API Documentation
 
 All API endpoints follow RESTful conventions with base path `/api/v1`.
@@ -240,6 +242,22 @@ Configuration example:
 - Enter the public network address in the Template field, e.g., `http://154.40.41.212:8201`
 - Ensure the service is properly deployed and accessible from the public network
 - After configuration, you can call all API interfaces of this service in Maker workflows
+
+### Maker Workflow
+
+We provide a complete Maker workflow configuration file that you can import and use directly:
+
+📄 [Download Maker Workflow Source File](./maker/AIVidFromPPT.json) - Contains complete workflow configuration
+
+![Maker Workflow Screenshot](./maker/AIVidFromPPT.png)
+
+**Usage Instructions**:
+1. Download the workflow source file `AIVidFromPPT.json`
+2. Import the workflow in the Maker platform
+3. Modify the service address in the HOST ENDPOINT configuration according to your actual situation
+4. Run the workflow to start using
+
+> ⚠️ **Important Notice**: Due to server resource limitations, when testing with the online service, please ensure that uploaded PPT files do not exceed 5 pages.
 
 ## 🎬 Demo Videos
 
