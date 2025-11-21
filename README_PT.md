@@ -219,9 +219,26 @@ Exemplo de configuração:
 
 A seguir estão exemplos de resultados de vídeo gerados chamando este serviço através da plataforma Maker:
 
-- **Demonstração em Chinês**: [resource/cn_video_res.mp4](./resource/cn_video_res.mp4)
-- **Demonstração em Inglês**: [resource/en_video_res.mp4](./resource/en_video_res.mp4)
-- **Demonstração em Português**: [resource/pt_video_res.mp4](./resource/pt_video_res.mp4)
+### Demonstração em Chinês
+
+<video width="800" controls>
+  <source src="./resource/cn_video_res.mp4" type="video/mp4">
+  Seu navegador não suporta reprodução de vídeo. Por favor, baixe o vídeo: <a href="./resource/cn_video_res.mp4">cn_video_res.mp4</a>
+</video>
+
+### Demonstração em Inglês
+
+<video width="800" controls>
+  <source src="./resource/en_video_res.mp4" type="video/mp4">
+  Seu navegador não suporta reprodução de vídeo. Por favor, baixe o vídeo: <a href="./resource/en_video_res.mp4">en_video_res.mp4</a>
+</video>
+
+### Demonstração em Português
+
+<video width="800" controls>
+  <source src="./resource/pt_video_res.mp4" type="video/mp4">
+  Seu navegador não suporta reprodução de vídeo. Por favor, baixe o vídeo: <a href="./resource/pt_video_res.mp4">pt_video_res.mp4</a>
+</video>
 
 ## 🔗 Links Relacionados
 
