@@ -1,3 +1,5 @@
+**语言 / Language / Idioma**: [中文](README_CN.md) | [English](README.md) | [Português](README_PT.md)
+
 # AIVidFromPPT
 
 一个基于 FastAPI 的 AI 视频生成服务，支持从 PPT 到视频的完整工作流，包括 PPT 解析、文本转语音、视频合成和虚拟数字人功能。
@@ -283,5 +285,5 @@ hackathon-AIVidFromPPT/
 
 ## 🔗 相关链接
 
-- API 文档: http://localhost:8201/docs
-- 交互式 API 文档: http://localhost:8201/redoc
+- API 文档: http://154.40.41.212:8201/docs
+- 交互式 API 文档: http://154.40.41.212:8201/redoc

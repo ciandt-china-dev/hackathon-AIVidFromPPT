@@ -1,3 +1,5 @@
+**Idioma / Language / 语言**: [Português](README_PT.md) | [English](README.md) | [中文](README_CN.md)
+
 # AIVidFromPPT
 
 Um serviço de geração de vídeo com IA baseado em FastAPI que suporta um fluxo de trabalho completo de PPT para vídeo, incluindo análise de PPT, conversão de texto em fala, síntese de vídeo e funcionalidade de humano virtual.
@@ -283,6 +285,6 @@ A seguir estão exemplos de resultados de vídeo gerados chamando este serviço 
 
 ## 🔗 Links Relacionados
 
-- Documentação da API: http://localhost:8201/docs
-- Documentação Interativa da API: http://localhost:8201/redoc
+- Documentação da API: http://154.40.41.212:8201/docs
+- Documentação Interativa da API: http://154.40.41.212:8201/redoc
 
