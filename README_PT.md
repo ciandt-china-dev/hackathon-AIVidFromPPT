@@ -2,6 +2,8 @@
 
 Um serviço de geração de vídeo com IA baseado em FastAPI que suporta um fluxo de trabalho completo de PPT para vídeo, incluindo análise de PPT, conversão de texto em fala, síntese de vídeo e funcionalidade de humano virtual.
 
+Este projeto fornece serviços de interface de API para a plataforma Maker. Após a implantação, é necessário configurar o endereço de rede pública no nó HOST ENDPOINT do Maker para chamar as interfaces de API deste serviço nos fluxos de trabalho do Maker.
+
 ## ✨ Funcionalidades
 
 - 📄 **Análise e Processamento de PPT** - Converter arquivos PPT/PPTX em imagens com gerenciamento de contexto
@@ -193,6 +195,33 @@ hackathon-AIVidFromPPT/
 | Variável | Obrigatório | Descrição | Padrão |
 |----------|-------------|-----------|--------|
 | `OPENAI_API_KEY` | ✅ | Chave da API OpenAI | Nenhum |
+
+## 🔧 Configuração do Maker
+
+### Configuração do HOST ENDPOINT
+
+Após a implantação, é necessário configurar o nó HOST ENDPOINT na plataforma Maker:
+
+1. Obter o endereço de rede pública do seu serviço (por exemplo: `http://your-domain.com` ou `http://your-ip:8201`)
+2. Adicionar um nó HOST ENDPOINT no seu fluxo de trabalho do Maker
+3. Inserir o endereço de rede pública na configuração do nó
+
+Exemplo de configuração:
+
+![Configuração do Host Endpoint](./resource/hostConfig.png)
+
+**Notas de Configuração**:
+- Inserir o endereço de rede pública no campo Template, por exemplo: `http://rockyj.natapp1.cc`
+- Garantir que o serviço está corretamente implantado e acessível da rede pública
+- Após a configuração, você pode chamar todas as interfaces de API deste serviço nos fluxos de trabalho do Maker
+
+## 🎬 Vídeos de Demonstração
+
+A seguir estão exemplos de resultados de vídeo gerados chamando este serviço através da plataforma Maker:
+
+- **Demonstração em Chinês**: [resource/cn_video_res.mp4](./resource/cn_video_res.mp4)
+- **Demonstração em Inglês**: [resource/en_video_res.mp4](./resource/en_video_res.mp4)
+- **Demonstração em Português**: [resource/pt_video_res.mp4](./resource/pt_video_res.mp4)
 
 ## 🔗 Links Relacionados
 

@@ -2,6 +2,8 @@
 
 一个基于 FastAPI 的 AI 视频生成服务，支持从 PPT 到视频的完整工作流，包括 PPT 解析、文本转语音、视频合成和虚拟数字人功能。
 
+本项目为 Maker 平台提供 API 接口服务。部署完成后，需要使用公网地址配置到 Maker 的 HOST ENDPOINT 节点，以便在 Maker 工作流中调用本服务的 API 接口。
+
 ## ✨ 功能特性
 
 - 📄 **PPT 解析与处理** - 将 PPT/PPTX 文件转换为图片，支持上下文管理
@@ -193,6 +195,33 @@ hackathon-AIVidFromPPT/
 | 变量名 | 必填 | 说明 | 默认值 |
 |--------|------|------|--------|
 | `OPENAI_API_KEY` | ✅ | OpenAI API 密钥 | 无 |
+
+## 🔧 Maker 配置
+
+### HOST ENDPOINT 配置
+
+部署完成后，需要在 Maker 平台配置 HOST ENDPOINT 节点：
+
+1. 获取服务的公网地址（例如：`http://your-domain.com` 或 `http://your-ip:8201`）
+2. 在 Maker 工作流中添加 HOST ENDPOINT 节点
+3. 在节点配置中填入服务的公网地址
+
+配置示例：
+
+![Host Endpoint Configuration](./resource/hostConfig.png)
+
+**配置说明**：
+- Template 字段填入服务的公网地址，例如：`http://rockyj.natapp1.cc`
+- 确保服务已正确部署并可公网访问
+- 配置完成后，即可在 Maker 工作流中调用本服务的所有 API 接口
+
+## 🎬 结果展示
+
+以下是使用 Maker 平台调用本服务生成的视频结果示例：
+
+- **中文示例**: [resource/cn_video_res.mp4](./resource/cn_video_res.mp4)
+- **英文示例**: [resource/en_video_res.mp4](./resource/en_video_res.mp4)
+- **葡萄牙语示例**: [resource/pt_video_res.mp4](./resource/pt_video_res.mp4)
 
 ## 🔗 相关链接
 
