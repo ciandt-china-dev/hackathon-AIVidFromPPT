@@ -124,6 +124,19 @@ docker run -d \
   unhejing/aividfromppt:latest
 ```
 
+### 🌐 在线服务（无需本地部署）
+
+如果您本地没有部署环境，可以直接使用我们提供的在线服务进行测试：
+
+- **服务地址**: `http://154.40.41.212:8201`
+- **API 文档**: `http://154.40.41.212:8201/docs`
+- **交互式文档**: `http://154.40.41.212:8201/redoc`
+
+**使用说明**：
+- 所有 API 接口都可以通过上述地址直接访问
+- 在 Maker 平台配置 HOST ENDPOINT 时，使用 `http://154.40.41.212:8201` 作为服务地址
+- 无需安装任何依赖或配置环境，开箱即用
+
 ## 📚 API 文档
 
 所有 API 接口都遵循 RESTful 规范，基础路径为 `/api/v1`。
@@ -224,7 +237,7 @@ hackathon-AIVidFromPPT/
 ![Host Endpoint Configuration](./resource/hostConfig.png)
 
 **配置说明**：
-- Template 字段填入服务的公网地址，例如：`http://rockyj.natapp1.cc`
+- Template 字段填入服务的公网地址，例如：`http://154.40.41.212:8201`
 - 确保服务已正确部署并可公网访问
 - 配置完成后，即可在 Maker 工作流中调用本服务的所有 API 接口
 

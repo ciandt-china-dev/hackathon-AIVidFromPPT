@@ -124,6 +124,19 @@ docker run -d \
   unhejing/aividfromppt:latest
 ```
 
+### 🌐 Online Service (No Local Deployment Required)
+
+If you don't have a local deployment environment, you can directly use our online service for testing:
+
+- **Service Address**: `http://154.40.41.212:8201`
+- **API Documentation**: `http://154.40.41.212:8201/docs`
+- **Interactive Documentation**: `http://154.40.41.212:8201/redoc`
+
+**Usage Notes**:
+- All API endpoints can be accessed directly through the above address
+- When configuring HOST ENDPOINT in the Maker platform, use `http://154.40.41.212:8201` as the service address
+- No need to install any dependencies or configure the environment, ready to use out of the box
+
 ## 📚 API Documentation
 
 All API endpoints follow RESTful conventions with base path `/api/v1`.
@@ -224,7 +237,7 @@ Configuration example:
 ![Host Endpoint Configuration](./resource/hostConfig.png)
 
 **Configuration Notes**:
-- Enter the public network address in the Template field, e.g., `http://rockyj.natapp1.cc`
+- Enter the public network address in the Template field, e.g., `http://154.40.41.212:8201`
 - Ensure the service is properly deployed and accessible from the public network
 - After configuration, you can call all API interfaces of this service in Maker workflows
 
